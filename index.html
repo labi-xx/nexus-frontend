@@ -1,0 +1,299 @@
+<script>
+// ─── Config ──────────────────────────────────────────────
+// 连接到你专属的 Render 云端引擎
+const API_BASE = 'https://nexus-api-server-ref0.onrender.com/api';
+
+// ─── Module definitions (static, no items) ───────────────
+const MODULES = [
+  { id:'downloads', icon:'↓', name:'App Downloads',  desc:'Client apps, tools, and packages from the secure repository.',    ctaLabel:'Download' },
+  { id:'tutorials', icon:'▶', name:'Tutorials',      desc:'Step-by-step guides and training modules for all skill levels.',  ctaLabel:'Launch tutorial' },
+  { id:'docs',      icon:'📄', name:'Documentation',  desc:'Technical specs, API references, and architecture guides.',       ctaLabel:'Open document' },
+  { id:'updates',   icon:'↻', name:'System Updates',  desc:'Patch notes, changelogs, and update notifications.',              ctaLabel:'Apply update' },
+  { id:'support',   icon:'💬', name:'Support',         desc:'Get help from diagnostics, knowledge base, or live agents.',     ctaLabel:'Proceed' },
+  { id:'community', icon:'⬡', name:'Community',       desc:'Forums, shared scripts, events, and the beta program.',          ctaLabel:'Open' },
+];
+
+// ─── State ───────────────────────────────────────────────
+let currentUser  = null;
+let authToken    = null;
+let currentMod   = null;
+let allItems     = [];
+let editingId    = null;
+let deletingId   = null;
+
+// ─── Token helpers ────────────────────────────────────────
+function saveSession(token, user, remember) {
+  authToken   = token;
+  currentUser = user;
+  const store = remember ? localStorage : sessionStorage;
+  store.setItem('nexus_token', token);
+  store.setItem('nexus_user',  JSON.stringify(user));
+}
+
+function clearSession() {
+  authToken = null; currentUser = null;
+  localStorage.removeItem('nexus_token');
+  localStorage.removeItem('nexus_user');
+  sessionStorage.removeItem('nexus_token');
+  sessionStorage.removeItem('nexus_user');
+}
+
+function loadSession() {
+  const token = localStorage.getItem('nexus_token') || sessionStorage.getItem('nexus_token');
+  const user  = localStorage.getItem('nexus_user')  || sessionStorage.getItem('nexus_user');
+  if (token && user) { authToken = token; currentUser = JSON.parse(user); return true; }
+  return false;
+}
+
+// ─── API helper (已适配你的简易 Node.js 后端) ───────────────────
+async function api(method, path, body) {
+  // 拦截尚未开发的 items 接口，返回空数据以防前端崩溃
+  if (path.startsWith('/items')) {
+      return method === 'GET' ? [] : {};
+  }
+
+  const opts = {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+  };
+  if (body) opts.body = JSON.stringify(body);
+
+  const res  = await fetch(API_BASE + path, opts);
+  const data = await res.json().catch(() => ({}));
+
+  // 针对你的后端逻辑进行适配：登录错误时会返回 status 401 且带 message
+  if (!res.ok || data.success === false) {
+    throw new Error(data.message || data.error || '请求被核心防御系统拦截');
+  }
+  return data;
+}
+
+// ─── Tab switching ────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.login-tab').forEach((el, i) => {
+    el.classList.toggle('active', (i === 0 && tab === 'login') || (i === 1 && tab === 'register'));
+  });
+  document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+  document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+  document.getElementById('api-error-login').classList.remove('show');
+  document.getElementById('api-error-register').classList.remove('show');
+}
+
+// ─── Login (已完美接驳云端) ───────────────────────────────────
+document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  let valid   = true;
+
+  clearFieldErrors(['login-email', 'login-pass'], ['login-email-err', 'login-pass-err']);
+  document.getElementById('api-error-login').classList.remove('show');
+
+  if (!email || !/\S+@\S+\.\S+/.test(email)) { setFieldError('login-email', 'login-email-err'); valid = false; }
+  if (!pass)                                   { setFieldError('login-pass',  'login-pass-err');  valid = false; }
+  if (!valid) return;
+
+  setLoading('login-btn', true, 'Authenticating…');
+  try {
+    const data = await api('POST', '/login', { email, password: pass });
+    const remember = document.getElementById('remember-me').checked;
+    
+    // 模拟生成前端需要的用户对象（包含炫酷的名字提取和管理员判定）
+    const simulatedUser = {
+        name: email.split('@')[0].toUpperCase(),
+        email: email,
+        role: email.includes('admin') ? 'admin' : 'user'
+    };
+    
+    saveSession('nexus-auth-token-mock', simulatedUser, remember);
+    enterApp();
+    showToast('✓', 'ACCESS GRANTED', 'Identity verified.');
+  } catch (err) {
+    showApiError('api-error-login', err.message);
+  } finally {
+    setLoading('login-btn', false, 'Sign in');
+  }
+}
+
+// ─── Register (已完美接驳云端) ──────────────────────────────────
+document.getElementById('reg-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doRegister(); });
+
+async function doRegister() {
+  const name  = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const pass  = document.getElementById('reg-pass').value;
+  let valid   = true;
+
+  clearFieldErrors(['reg-name','reg-email','reg-pass'], ['reg-name-err','reg-email-err','reg-pass-err']);
+  document.getElementById('api-error-register').classList.remove('show');
+
+  if (!name)                                    { setFieldError('reg-name',  'reg-name-err');  valid = false; }
+  if (!email || !/\S+@\S+\.\S+/.test(email))   { setFieldError('reg-email', 'reg-email-err'); valid = false; }
+  if (!pass || pass.length < 6)                 { setFieldError('reg-pass',  'reg-pass-err');  valid = false; } // 修改为6位防止太严
+  if (!valid) return;
+
+  setLoading('register-btn', true, 'Encrypting data…');
+  try {
+    // 调用你的注册接口
+    const data = await api('POST', '/register', { email, password: pass });
+    
+    // 注册成功后直接模拟登录进入系统
+    const simulatedUser = { name: name.toUpperCase(), email: email, role: 'user' };
+    saveSession('nexus-auth-token-mock', simulatedUser, false);
+    
+    enterApp();
+    showToast('✓', 'System Initialized', 'Welcome to Nexus Core, ' + name + '!');
+  } catch (err) {
+    showApiError('api-error-register', err.message);
+  } finally {
+    setLoading('register-btn', false, 'Create account');
+  }
+}
+
+// ─── Enter app after auth ─────────────────────────────────
+function enterApp() {
+  document.getElementById('nav-user').textContent         = currentUser.email;
+  document.getElementById('nav-role-badge').textContent   = currentUser.role === 'admin' ? '⚡ ADMIN' : '👤 OP';
+  document.getElementById('nav-role-badge').className     = 'role-badge ' + currentUser.role;
+  document.getElementById('detail-role-badge').textContent= currentUser.role === 'admin' ? '⚡ ADMIN' : '👤 OP';
+  document.getElementById('detail-role-badge').className  = 'role-badge ' + currentUser.role;
+  document.getElementById('dash-name').textContent        = currentUser.name;
+  buildDashboard();
+  showPage('dashboard-page');
+}
+
+// ─── Logout ───────────────────────────────────────────────
+function logout() {
+  clearSession();
+  showPage('login-page');
+  showToast('↩', 'Disconnected', 'Session purged from memory.');
+}
+
+// ─── Dashboard ────────────────────────────────────────────
+function buildDashboard() {
+  const grid = document.getElementById('modules-grid');
+  grid.innerHTML = '';
+  MODULES.forEach(mod => {
+    const card = document.createElement('div');
+    card.className = 'module-card';
+    card.innerHTML = `
+      <div class="card-icon-wrap">${mod.icon}</div>
+      <div class="card-name">${mod.name}</div>
+      <div class="card-desc">${mod.desc}</div>
+      <div class="card-footer">
+        <span class="card-count">SYSTEM READY</span>
+        <span class="card-arrow">→</span>
+      </div>`;
+    card.onclick = () => openModule(mod.id);
+    grid.appendChild(card);
+  });
+}
+
+// ─── Detail / Items ───────────────────────────────────────
+async function openModule(id) {
+  currentMod = id;
+  const mod  = MODULES.find(m => m.id === id);
+
+  document.getElementById('breadcrumb-label').textContent = mod.name;
+  document.getElementById('detail-icon').textContent      = mod.icon;
+  document.getElementById('detail-title').textContent     = mod.name;
+  document.getElementById('detail-subtitle').textContent  = mod.desc;
+  document.getElementById('search-box').value             = '';
+
+  const addBtn = document.getElementById('add-item-btn');
+  currentUser.role === 'admin' ? addBtn.classList.remove('hidden') : addBtn.classList.add('hidden');
+
+  showPage('detail-page');
+  renderSkeletons();
+
+  try {
+    allItems = await api('GET', '/items/' + id);
+    renderItems(allItems);
+  } catch (err) {
+    document.getElementById('list-group').innerHTML = `<div class="empty-state">No connection to module database.</div>`;
+  }
+}
+
+function renderSkeletons() {
+  const group = document.getElementById('list-group');
+  document.getElementById('filter-count').textContent = '—';
+  group.innerHTML = Array.from({length: 3}).map(() => `
+    <div class="list-item">
+      <div class="list-icon skeleton"></div>
+      <div class="list-info">
+        <div class="skeleton" style="height:14px;width:60%;border-radius:4px;margin-bottom:6px"></div>
+        <div class="skeleton" style="height:11px;width:40%;border-radius:4px"></div>
+      </div>
+    </div>`).join('');
+}
+
+function renderItems(items) {
+  const group   = document.getElementById('list-group');
+  const isAdmin = currentUser && currentUser.role === 'admin';
+  const mod     = MODULES.find(m => m.id === currentMod);
+  document.getElementById('filter-count').textContent = items.length + ' records';
+  group.innerHTML = '';
+
+  if (items.length === 0) {
+    group.innerHTML = `<div class="empty-state">Data stream empty. Waiting for sync.</div>`;
+    return;
+  }
+}
+
+function filterItems(q) {
+  const filtered = allItems.filter(i =>
+    i.name.toLowerCase().includes(q.toLowerCase()) ||
+    (i.meta || '').toLowerCase().includes(q.toLowerCase())
+  );
+  renderItems(filtered);
+}
+
+function goBack() { showPage('dashboard-page'); buildDashboard(); }
+
+function openOverlay(id)  { document.getElementById(id).classList.add('show'); }
+function closeOverlay(id) { document.getElementById(id).classList.remove('show'); }
+
+// ─── Utilities ───────────────────────────────────────────
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+  window.scrollTo(0, 0);
+}
+
+function setLoading(btnId, loading, label) {
+  const btn = document.getElementById(btnId);
+  btn.disabled = loading;
+  btn.innerHTML = loading ? `<span class="spinner"></span>${label}` : label;
+}
+
+function setFieldError(inputId, errorId) {
+  document.getElementById(inputId).classList.add('invalid');
+  document.getElementById(errorId).classList.add('show');
+}
+
+function clearFieldErrors(inputIds, errorIds) {
+  inputIds.forEach(id => document.getElementById(id).classList.remove('invalid'));
+  errorIds.forEach(id => document.getElementById(id).classList.remove('show'));
+}
+
+function showApiError(elId, msg) {
+  const el = document.getElementById(elId);
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+function showToast(icon, title, msg) {
+  const el = document.getElementById('toast');
+  document.getElementById('toast-icon').textContent  = icon;
+  document.getElementById('toast-title').textContent = title;
+  document.getElementById('toast-msg').textContent   = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+// ─── Boot: restore session if token exists ────────────────
+if (loadSession()) {
+  enterApp(); // 直接登入，跳过尚未编写的 /auth/me 验证
+}
+</script>
