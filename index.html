@@ -1,240 +1,24 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Nexus Portal</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg: #0c0f14;
-    --surface: #13161d;
-    --surface2: #1a1e28;
-    --border: rgba(255,255,255,0.07);
-    --border-hover: rgba(255,255,255,0.14);
-    --accent: #4f8ef7;
-    --accent-dim: rgba(79,142,247,0.12);
-    --accent-glow: rgba(79,142,247,0.25);
-    --green: #34d399;
-    --red: #f87171;
-    --amber: #fbbf24;
-    --text-primary: #e8eaf0;
-    --text-secondary: #6b7280;
-    --text-muted: #3d4452;
-    --radius: 8px;
-  }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: var(--bg); color: var(--text-primary); font-family: 'Inter', sans-serif; min-height: 100vh; -webkit-font-smoothing: antialiased; }
-
-  .page { display: flex; min-height: 100vh; }
-  .page.hidden { display: none !important; }
-
-  /* ── TOPBAR ── */
-  .topbar { position: fixed; top: 0; left: 0; right: 0; height: 52px; background: rgba(12,15,20,0.9); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 24px; justify-content: space-between; z-index: 100; }
-  .topbar-logo { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
-  .logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
-  .topbar-right { display: flex; align-items: center; gap: 14px; }
-  .topbar-user { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text-secondary); }
-  .role-badge { padding: 2px 8px; border-radius: 4px; font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 500; }
-  .role-badge.admin { background: rgba(251,191,36,0.15); color: var(--amber); border: 1px solid rgba(251,191,36,0.25); }
-  .role-badge.user  { background: rgba(79,142,247,0.12);  color: #6ba3ff;    border: 1px solid rgba(79,142,247,0.2); }
-  .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text-secondary); font-family: 'Inter', sans-serif; font-size: 12px; padding: 5px 14px; border-radius: var(--radius); cursor: pointer; transition: all 0.2s; }
-  .btn-ghost:hover { border-color: var(--border-hover); color: var(--text-primary); background: var(--surface); }
-
-  /* ── LOGIN ── */
-  #login-page { align-items: center; justify-content: center; flex-direction: column; background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(79,142,247,0.08) 0%, transparent 60%); }
-  .login-wrap { width: 100%; max-width: 400px; padding: 20px; }
-  .login-logo { text-align: center; margin-bottom: 32px; }
-  .login-logo-mark { width: 44px; height: 44px; border-radius: 12px; background: var(--surface2); border: 1px solid var(--border-hover); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 20px; }
-  .login-logo-name { font-size: 18px; font-weight: 600; letter-spacing: -0.4px; }
-  .login-logo-tag { font-size: 13px; color: var(--text-secondary); margin-top: 3px; }
-  .login-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px 32px; box-shadow: 0 24px 80px rgba(0,0,0,0.4); }
-  .login-card-title { font-size: 17px; font-weight: 600; margin-bottom: 4px; letter-spacing: -0.3px; }
-  .login-card-sub { font-size: 13px; color: var(--text-secondary); margin-bottom: 24px; }
-
-  .field { margin-bottom: 16px; }
-  .field label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; }
-  .field input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-primary); font-family: 'Inter', sans-serif; font-size: 14px; padding: 10px 14px; outline: none; transition: all 0.2s; }
-  .field input:focus { border-color: rgba(79,142,247,0.5); box-shadow: 0 0 0 3px var(--accent-dim); }
-  .field input::placeholder { color: var(--text-muted); }
-  .field input.invalid { border-color: rgba(248,113,113,0.5); }
-  .field input.invalid:focus { box-shadow: 0 0 0 3px rgba(248,113,113,0.1); }
-  .error-hint { font-size: 12px; color: var(--red); margin-top: 5px; display: none; }
-  .error-hint.show { display: block; }
-
-  /* global api error banner */
-  .api-error { display: none; background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.2); border-radius: 6px; padding: 10px 14px; font-size: 13px; color: var(--red); margin-bottom: 16px; }
-  .api-error.show { display: block; }
-
-  .field-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; margin-top: -4px; }
-  .remember { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--text-secondary); cursor: pointer; user-select: none; }
-  .remember input { display: none; }
-  .check-box { width: 16px; height: 16px; border: 1px solid var(--border-hover); border-radius: 4px; background: var(--surface2); display: flex; align-items: center; justify-content: center; transition: all 0.15s; flex-shrink: 0; }
-  .remember input:checked ~ .check-box { background: var(--accent); border-color: var(--accent); }
-  .remember input:checked ~ .check-box::after { content: ''; width: 9px; height: 6px; border-left: 1.5px solid #fff; border-bottom: 1.5px solid #fff; transform: rotate(-45deg) translate(1px,-1px); display: block; }
-  .link-muted { font-size: 13px; color: var(--text-secondary); text-decoration: none; transition: color 0.2s; }
-  .link-muted:hover { color: var(--text-primary); }
-
-  .btn-primary { width: 100%; padding: 10px 16px; background: var(--accent); border: none; border-radius: var(--radius); color: #fff; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
-  .btn-primary:hover:not(:disabled) { background: #6ba3ff; box-shadow: 0 4px 20px var(--accent-glow); transform: translateY(-1px); }
-  .btn-primary:active { transform: translateY(0); }
-  .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
-
-  .login-tabs { display: flex; gap: 0; margin-bottom: 22px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-  .login-tab { flex: 1; padding: 8px; background: transparent; border: none; color: var(--text-secondary); font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
-  .login-tab.active { background: var(--surface2); color: var(--text-primary); }
-
-  .tab-panel { display: none; }
-  .tab-panel.active { display: block; }
-
-  .login-footer-text { text-align: center; font-size: 13px; color: var(--text-secondary); margin-top: 18px; }
-
-  /* spinner */
-  .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* ── DASHBOARD ── */
-  #dashboard-page { flex-direction: column; padding-top: 52px; }
-  .dash-content { max-width: 980px; margin: 0 auto; padding: 48px 24px 60px; width: 100%; }
-  .dash-greeting { margin-bottom: 32px; }
-  .dash-eyebrow { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--accent); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
-  .dash-title { font-size: 26px; font-weight: 600; letter-spacing: -0.6px; margin-bottom: 6px; }
-  .dash-desc { font-size: 14px; color: var(--text-secondary); }
-
-  .status-strip { display: flex; align-items: center; gap: 24px; padding: 11px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 34px; flex-wrap: wrap; }
-  .status-item { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--text-secondary); }
-  .dot-green { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); flex-shrink: 0; animation: pulse 2s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-  .status-value { color: var(--text-primary); font-weight: 500; }
-
-  .section-label { font-size: 11px; font-weight: 600; color: var(--text-secondary); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 14px; }
-  .modules-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
-
-  .module-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; }
-  .module-card:hover { border-color: var(--border-hover); transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,0,0,0.3); }
-  .card-icon-wrap { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; font-size: 17px; background: var(--surface2); border: 1px solid var(--border); }
-  .card-name { font-size: 14px; font-weight: 600; margin-bottom: 5px; }
-  .card-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.55; }
-  .card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
-  .card-count { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-muted); }
-  .card-arrow { font-size: 15px; color: var(--text-muted); transition: all 0.2s; }
-  .module-card:hover .card-arrow { color: var(--accent); transform: translateX(3px); }
-
-  /* ── TOAST ── */
-  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface2); border: 1px solid var(--border-hover); border-radius: 10px; padding: 12px 16px; min-width: 260px; max-width: 320px; box-shadow: 0 16px 40px rgba(0,0,0,0.4); transform: translateY(20px); opacity: 0; transition: all 0.3s ease; z-index: 300; display: flex; align-items: flex-start; gap: 10px; }
-  .toast.show { transform: translateY(0); opacity: 1; }
-  .toast-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
-  .toast-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
-  .toast-msg { font-size: 12px; color: var(--text-secondary); line-height: 1.4; }
-  .progress-bar { position: fixed; top: 0; left: 0; height: 2px; background: var(--accent); width: 0; z-index: 999; }
-</style>
-</head>
-<body>
-
-<div class="progress-bar" id="progress-bar"></div>
-
-<div class="page" id="login-page">
-  <div class="login-wrap">
-    <div class="login-logo">
-      <div class="login-logo-mark">⬡</div>
-      <div class="login-logo-name">Nexus</div>
-      <div class="login-logo-tag">Unified Control Platform</div>
-    </div>
-    <div class="login-card">
-      <div class="login-tabs">
-        <button class="login-tab active" onclick="switchTab('login')">Sign in</button>
-        <button class="login-tab" onclick="switchTab('register')">Register</button>
-      </div>
-
-      <div class="api-error" id="api-error-login"></div>
-
-      <div class="tab-panel active" id="tab-login">
-        <div class="field">
-          <label>Email</label>
-          <input type="email" id="login-email" placeholder="you@company.com">
-          <div class="error-hint" id="login-email-err">Please enter a valid email.</div>
-        </div>
-        <div class="field">
-          <label>Password</label>
-          <input type="password" id="login-pass" placeholder="••••••••">
-          <div class="error-hint" id="login-pass-err">Password cannot be empty.</div>
-        </div>
-        <button class="btn-primary" id="login-btn" onclick="doLogin()">Sign in</button>
-      </div>
-
-      <div class="tab-panel" id="tab-register">
-        <div class="api-error" id="api-error-register"></div>
-        <div class="field">
-          <label>Full Name</label>
-          <input type="text" id="reg-name" placeholder="Your name">
-          <div class="error-hint" id="reg-name-err">Name is required.</div>
-        </div>
-        <div class="field">
-          <label>Email</label>
-          <input type="email" id="reg-email" placeholder="you@company.com">
-          <div class="error-hint" id="reg-email-err">Please enter a valid email.</div>
-        </div>
-        <div class="field">
-          <label>Password</label>
-          <input type="password" id="reg-pass" placeholder="Min. 6 chars">
-          <div class="error-hint" id="reg-pass-err">Password must be at least 6 characters.</div>
-        </div>
-        <button class="btn-primary" id="register-btn" onclick="doRegister()" style="margin-top:4px">Create account</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="page hidden" id="dashboard-page">
-  <nav class="topbar">
-    <div class="topbar-logo"><div class="logo-dot"></div>Nexus</div>
-    <div class="topbar-right">
-      <span class="topbar-user" id="nav-user">—</span>
-      <span class="role-badge" id="nav-role-badge">—</span>
-      <button class="btn-ghost" onclick="logout()">Sign out</button>
-    </div>
-  </nav>
-  <div class="dash-content">
-    <div class="dash-greeting">
-      <div class="dash-eyebrow">Dashboard</div>
-      <div class="dash-title">Good to see you, <span id="dash-name">there</span>.</div>
-      <div class="dash-desc">Select a module below to get started.</div>
-    </div>
-    <div class="status-strip">
-      <div class="status-item"><div class="dot-green"></div>All systems <span class="status-value" style="margin-left:4px">operational</span></div>
-      <div class="status-item">Node: <span class="status-value" style="margin-left:4px">CLOUD-RENDER</span></div>
-    </div>
-    <div class="section-label">Modules</div>
-    <div class="modules-grid" id="modules-grid"></div>
-  </div>
-</div>
-
-<div class="toast" id="toast">
-  <div class="toast-icon" id="toast-icon">✓</div>
-  <div>
-    <div class="toast-title" id="toast-title">—</div>
-    <div class="toast-msg" id="toast-msg">—</div>
-  </div>
-</div>
-
-<script>
 // ─── Config ──────────────────────────────────────────────
 const API_BASE = 'https://nexus-api-server-ref0.onrender.com/api';
 
 const MODULES = [
-  { id:'downloads', icon:'↓', name:'App Downloads',  desc:'Client apps, tools, and packages from the secure repository.' },
-  { id:'tutorials', icon:'▶', name:'Tutorials',      desc:'Step-by-step guides and training modules for all skill levels.' },
-  { id:'docs',      icon:'📄', name:'Documentation',  desc:'Technical specs, API references, and architecture guides.' },
-  { id:'updates',   icon:'↻', name:'System Updates',  desc:'Patch notes, changelogs, and update notifications.' },
-  { id:'support',   icon:'💬', name:'Support',         desc:'Get help from diagnostics, knowledge base, or live agents.' },
-  { id:'community', icon:'⬡', name:'Community',       desc:'Forums, shared scripts, events, and the beta program.' },
+  { id:'downloads', icon:'↓', name:'App Downloads',  desc:'Client apps, tools, and packages from the secure repository.',    ctaLabel:'Download' },
+  { id:'tutorials', icon:'▶', name:'Tutorials',      desc:'Step-by-step guides and training modules for all skill levels.',  ctaLabel:'Launch tutorial' },
+  { id:'docs',      icon:'📄', name:'Documentation',  desc:'Technical specs, API references, and architecture guides.',       ctaLabel:'Open document' },
+  { id:'updates',   icon:'↻', name:'System Updates',  desc:'Patch notes, changelogs, and update notifications.',              ctaLabel:'Apply update' },
+  { id:'support',   icon:'💬', name:'Support',         desc:'Get help from diagnostics, knowledge base, or live agents.',     ctaLabel:'Proceed' },
+  { id:'community', icon:'⬡', name:'Community',       desc:'Forums, shared scripts, events, and the beta program.',          ctaLabel:'Open' },
 ];
 
-let currentUser = null;
+let currentUser  = null;
+let currentMod   = null;
+let allItems     = [];
+let editingId    = null;
+let deletingId   = null;
 
 function saveSession(user) {
   currentUser = user;
-  sessionStorage.setItem('nexus_user',  JSON.stringify(user));
+  sessionStorage.setItem('nexus_user', JSON.stringify(user));
 }
 
 function loadSession() {
@@ -243,6 +27,7 @@ function loadSession() {
   return false;
 }
 
+// 核心网络请求函数
 async function api(method, path, body) {
   const opts = { method, headers: { 'Content-Type': 'application/json' } };
   if (body) opts.body = JSON.stringify(body);
@@ -251,7 +36,7 @@ async function api(method, path, body) {
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok || data.success === false) {
-    throw new Error(data.message || data.error || 'Request blocked by server.');
+    throw new Error(data.message || data.error || 'Server request failed');
   }
   return data;
 }
@@ -264,15 +49,16 @@ function switchTab(tab) {
   document.getElementById('tab-register').classList.toggle('active', tab === 'register');
 }
 
+// 登录
 async function doLogin() {
   const email = document.getElementById('login-email').value.trim();
   const pass  = document.getElementById('login-pass').value;
-  if (!email || !pass) return alert("Email and Password required.");
+  if (!email || !pass) return showApiError('api-error-login', 'Please enter email and password.');
 
   setLoading('login-btn', true, 'Authenticating…');
   try {
     await api('POST', '/login', { email, password: pass });
-    const role = email.includes('admin') ? 'admin' : 'user';
+    const role = email.includes('admin') ? 'admin' : 'user'; // 包含admin字眼的邮箱自动成为管理员
     saveSession({ name: email.split('@')[0].toUpperCase(), email, role });
     enterApp();
     showToast('✓', 'ACCESS GRANTED', 'Identity verified.');
@@ -283,11 +69,12 @@ async function doLogin() {
   }
 }
 
+// 注册
 async function doRegister() {
   const name  = document.getElementById('reg-name').value.trim();
   const email = document.getElementById('reg-email').value.trim();
   const pass  = document.getElementById('reg-pass').value;
-  if (!name || !email || !pass) return alert("All fields required.");
+  if (!name || !email || !pass) return showApiError('api-error-register', 'All fields required.');
 
   setLoading('register-btn', true, 'Encrypting…');
   try {
@@ -302,48 +89,247 @@ async function doRegister() {
   }
 }
 
+// 进入系统主页
 function enterApp() {
   document.getElementById('nav-user').textContent = currentUser.email;
   document.getElementById('nav-role-badge').textContent = currentUser.role === 'admin' ? '⚡ ADMIN' : '👤 OP';
+  document.getElementById('nav-role-badge').className = 'role-badge ' + currentUser.role;
+  document.getElementById('detail-role-badge').textContent = currentUser.role === 'admin' ? '⚡ ADMIN' : '👤 OP';
+  document.getElementById('detail-role-badge').className = 'role-badge ' + currentUser.role;
   document.getElementById('dash-name').textContent = currentUser.name;
   
+  buildDashboard();
+  showPage('dashboard-page');
+}
+
+// 渲染仪表盘卡片
+function buildDashboard() {
   const grid = document.getElementById('modules-grid');
   grid.innerHTML = '';
   MODULES.forEach(mod => {
-    grid.innerHTML += `
-      <div class="module-card" onclick="alert('Module connected via Secure Node.')">
-        <div class="card-icon-wrap">${mod.icon}</div>
-        <div class="card-name">${mod.name}</div>
-        <div class="card-desc">${mod.desc}</div>
-        <div class="card-footer">
-          <span class="card-count">SYSTEM READY</span>
-          <span class="card-arrow">→</span>
-        </div>
+    const card = document.createElement('div');
+    card.className = 'module-card';
+    card.innerHTML = `
+      <div class="card-icon-wrap">${mod.icon}</div>
+      <div class="card-name">${mod.name}</div>
+      <div class="card-desc">${mod.desc}</div>
+      <div class="card-footer">
+        <span class="card-count skeleton" style="width:48px;height:12px;display:inline-block"></span>
+        <span class="card-arrow">→</span>
       </div>`;
-  });
+    card.onclick = () => openModule(mod.id);
+    grid.appendChild(card);
 
-  document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
-  document.getElementById('dashboard-page').classList.remove('hidden');
+    // 异步拉取每个模块的数据数量
+    api('GET', '/items/' + mod.id).then(items => {
+        const countEl = card.querySelector('.card-count');
+        countEl.classList.remove('skeleton'); countEl.style = '';
+        countEl.textContent = items.length + ' item' + (items.length !== 1 ? 's' : '');
+    }).catch(() => {
+        const countEl = card.querySelector('.card-count');
+        countEl.classList.remove('skeleton'); countEl.style = '';
+        countEl.textContent = '—';
+    });
+  });
 }
 
+// 打开具体模块页面
+async function openModule(id) {
+  currentMod = id;
+  const mod  = MODULES.find(m => m.id === id);
+
+  document.getElementById('breadcrumb-label').textContent = mod.name;
+  document.getElementById('detail-icon').textContent      = mod.icon;
+  document.getElementById('detail-title').textContent     = mod.name;
+  document.getElementById('detail-subtitle').textContent  = mod.desc;
+
+  const addBtn = document.getElementById('add-item-btn');
+  currentUser.role === 'admin' ? addBtn.classList.remove('hidden') : addBtn.classList.add('hidden');
+
+  showPage('detail-page');
+  renderSkeletons();
+
+  try {
+    allItems = await api('GET', '/items/' + id);
+    renderItems(allItems);
+  } catch (err) {
+    document.getElementById('list-group').innerHTML = `<div class="empty-state">Load failed: ${err.message}</div>`;
+  }
+}
+
+function renderSkeletons() {
+  const group = document.getElementById('list-group');
+  document.getElementById('filter-count').textContent = '—';
+  group.innerHTML = Array.from({length: 3}).map(() => `
+    <div class="list-item">
+      <div class="list-icon skeleton"></div>
+      <div class="list-info">
+        <div class="skeleton" style="height:14px;width:60%;border-radius:4px;margin-bottom:6px"></div>
+        <div class="skeleton" style="height:11px;width:40%;border-radius:4px"></div>
+      </div>
+    </div>`).join('');
+}
+
+function renderItems(items) {
+  const group   = document.getElementById('list-group');
+  const isAdmin = currentUser && currentUser.role === 'admin';
+  const mod     = MODULES.find(m => m.id === currentMod);
+  document.getElementById('filter-count').textContent = items.length + ' records';
+  group.innerHTML = '';
+
+  if (items.length === 0) {
+    group.innerHTML = `<div class="empty-state">No items found. ${isAdmin ? 'Click "+ Add Item" to create one.' : ''}</div>`;
+    return;
+  }
+
+  items.forEach((item, i) => {
+    const el = document.createElement('div');
+    el.className = 'list-item' + (isAdmin ? '' : ' clickable');
+    el.style.animationDelay = (i * 0.04) + 's';
+
+    const right = isAdmin
+      ? `<div class="item-actions">
+           <button class="btn-icon edit" onclick="openEditModal('${item._id}', event)">✎</button>
+           <button class="btn-icon danger" onclick="openDeleteModal('${item._id}', '${item.name.replace(/'/g,"\\'")}', event)">✕</button>
+         </div>`
+      : `<span class="list-chevron">›</span>`;
+
+    el.innerHTML = `
+      <div class="list-icon">${item.icon || '📌'}</div>
+      <div class="list-info">
+        <div class="list-name">${item.name}</div>
+        <div class="list-meta">${item.meta || ''}</div>
+      </div>
+      <span class="badge badge-${item.badge}">${item.badge}</span>
+      ${right}`;
+
+    if (!isAdmin) el.onclick = () => openViewModal(item, mod.ctaLabel);
+    group.appendChild(el);
+  });
+}
+
+function filterItems(q) {
+  const filtered = allItems.filter(i => i.name.toLowerCase().includes(q.toLowerCase()) || (i.meta || '').toLowerCase().includes(q.toLowerCase()));
+  renderItems(filtered);
+}
+
+function goBack() { showPage('dashboard-page'); buildDashboard(); }
+
+// ─── 弹窗与增删改逻辑 ───
+
+function openViewModal(item, ctaLabel) {
+  document.getElementById('vm-icon').textContent  = item.icon || '📌';
+  document.getElementById('vm-title').textContent = item.name;
+  document.getElementById('vm-meta').textContent  = item.meta  || '';
+  document.getElementById('vm-desc').textContent  = item.desc  || 'No description.';
+  const cta = document.getElementById('vm-cta');
+  cta.textContent = ctaLabel;
+  cta.onclick = () => { closeOverlay('view-overlay'); showToast('✓', ctaLabel, 'Action triggered.'); };
+  openOverlay('view-overlay');
+}
+
+function openAddModal() {
+  editingId = null;
+  document.getElementById('edit-modal-title').textContent = 'Add Item';
+  document.getElementById('edit-confirm-btn').textContent = 'Add Item';
+  ['ef-icon','ef-name','ef-meta','ef-desc'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('ef-badge').value = 'new';
+  openOverlay('edit-overlay');
+}
+
+function openEditModal(id, e) {
+  e.stopPropagation();
+  const item = allItems.find(i => i._id === id);
+  if (!item) return;
+  editingId = id;
+  document.getElementById('edit-modal-title').textContent = 'Edit Item';
+  document.getElementById('edit-confirm-btn').textContent = 'Save Changes';
+  document.getElementById('ef-icon').value  = item.icon  || '';
+  document.getElementById('ef-name').value  = item.name  || '';
+  document.getElementById('ef-meta').value  = item.meta  || '';
+  document.getElementById('ef-desc').value  = item.desc  || '';
+  document.getElementById('ef-badge').value = item.badge || 'new';
+  openOverlay('edit-overlay');
+}
+
+async function saveItem() {
+  const icon  = document.getElementById('ef-icon').value.trim() || '📌';
+  const name  = document.getElementById('ef-name').value.trim();
+  const meta  = document.getElementById('ef-meta').value.trim();
+  const desc  = document.getElementById('ef-desc').value.trim();
+  const badge = document.getElementById('ef-badge').value;
+
+  if (!name) return alert('Name is required');
+
+  const btn = document.getElementById('edit-confirm-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+
+  try {
+    if (editingId === null) {
+      // 发送创建请求
+      const created = await api('POST', '/items', { moduleId: currentMod, icon, name, meta, badge, desc });
+      allItems.push(created);
+      showToast('✓', 'Item added', 'Saved to database.');
+    } else {
+      // 发送更新请求
+      const updated = await api('PATCH', '/items/' + editingId, { icon, name, meta, badge, desc });
+      const idx = allItems.findIndex(i => i._id === editingId);
+      if (idx !== -1) allItems[idx] = updated;
+      showToast('✎', 'Item updated', 'Changes saved.');
+    }
+    closeOverlay('edit-overlay');
+    renderItems(allItems);
+  } catch (err) {
+    alert('Error: ' + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = editingId ? 'Save Changes' : 'Add Item';
+  }
+}
+
+function openDeleteModal(id, name, e) {
+  e.stopPropagation();
+  deletingId = id;
+  document.getElementById('delete-item-name').textContent = name;
+  openOverlay('delete-overlay');
+}
+
+async function confirmDelete() {
+  const btn = document.getElementById('delete-confirm-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+  try {
+    await api('DELETE', '/items/' + deletingId);
+    allItems = allItems.filter(i => i._id !== deletingId);
+    closeOverlay('delete-overlay');
+    renderItems(allItems);
+    showToast('🗑', 'Deleted', 'Item removed permanently.');
+  } catch (err) {
+    alert('Error: ' + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Delete';
+  }
+}
+
+// ─── 辅助函数 ───
 function logout() {
   sessionStorage.removeItem('nexus_user');
-  document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
-  document.getElementById('login-page').classList.remove('hidden');
+  showPage('login-page');
   showToast('↩', 'Disconnected', 'Session purged.');
 }
 
+function openOverlay(id)  { document.getElementById(id).classList.add('show'); }
+function closeOverlay(id) { document.getElementById(id).classList.remove('show'); }
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+}
 function setLoading(btnId, loading, label) {
   const btn = document.getElementById(btnId);
   btn.disabled = loading;
   btn.innerHTML = loading ? `<span class="spinner"></span>${label}` : label;
 }
-
 function showApiError(id, msg) {
-  const el = document.getElementById(id);
-  el.textContent = msg; el.classList.add('show');
+  const el = document.getElementById(id); el.textContent = msg; el.classList.add('show');
 }
-
 function showToast(icon, title, msg) {
   const el = document.getElementById('toast');
   document.getElementById('toast-icon').textContent = icon;
@@ -354,6 +340,3 @@ function showToast(icon, title, msg) {
 }
 
 if (loadSession()) enterApp();
-</script>
-</body>
-</html>
