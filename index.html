@@ -94,6 +94,12 @@
   .btn-modal-primary { flex: 1; padding: 9px 16px; background: var(--accent); border: none; border-radius: var(--radius); color: #fff; cursor: pointer; }
   .btn-modal-secondary { padding: 9px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-secondary); cursor: pointer; }
 
+  /* View Modal (For normal users) */
+  #vm-icon { font-size: 24px; margin-bottom: 12px; }
+  #vm-title { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+  #vm-meta { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
+  #vm-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.6; padding: 12px; background: var(--surface2); border-radius: 6px; margin-bottom: 20px; }
+
   /* Toast */
   .toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface2); border: 1px solid var(--border-hover); border-radius: 10px; padding: 12px 16px; box-shadow: 0 16px 40px rgba(0,0,0,0.4); transform: translateY(20px); opacity: 0; transition: all 0.3s; z-index: 300; display: flex; gap: 10px; }
   .toast.show { transform: translateY(0); opacity: 1; }
@@ -169,9 +175,24 @@
     <div class="form-field"><label>Icon (emoji)</label><input type="text" id="ef-icon" placeholder="🚀"></div>
     <div class="form-field"><label>Name</label><input type="text" id="ef-name" placeholder="Item Name"></div>
     <div class="form-field"><label>Description / Meta</label><input type="text" id="ef-meta" placeholder="Details..."></div>
+    <div class="form-field"><label>Download URL / Link (Optional)</label><input type="url" id="ef-url" placeholder="https://drive.google.com/..."></div>
+    
     <div class="modal-actions">
       <button class="btn-modal-primary" id="edit-confirm-btn" onclick="saveItem()">Save</button>
       <button class="btn-modal-secondary" onclick="closeOverlay('edit-overlay')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="view-overlay" onclick="closeOverlay('view-overlay')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div id="vm-icon">📌</div>
+    <div id="vm-title">Item Name</div>
+    <div id="vm-meta">Meta data</div>
+    <div id="vm-desc">No description available.</div>
+    <div class="modal-actions">
+      <button class="btn-modal-primary" id="vm-cta">Download Link</button>
+      <button class="btn-modal-secondary" onclick="closeOverlay('view-overlay')">Close</button>
     </div>
   </div>
 </div>
@@ -188,9 +209,9 @@
 const API_BASE = 'https://nexus-api-server-ref0.onrender.com/api';
 
 const MODULES = [
-  { id:'downloads', icon:'↓', name:'App Downloads', desc:'Client apps, tools, and packages.' },
-  { id:'tutorials', icon:'▶', name:'Tutorials',     desc:'Step-by-step guides and training.' },
-  { id:'docs',      icon:'📄', name:'Documentation', desc:'Technical specs and architecture.' },
+  { id:'downloads', icon:'↓', name:'App Downloads', desc:'Client apps, tools, and packages.', ctaLabel:'Download Now' },
+  { id:'tutorials', icon:'▶', name:'Tutorials',     desc:'Step-by-step guides and training.', ctaLabel:'Open Link' },
+  { id:'docs',      icon:'📄', name:'Documentation', desc:'Technical specs and architecture.', ctaLabel:'View Doc' },
 ];
 
 let currentUser = null, currentMod = null, allItems = [], editingId = null;
@@ -271,32 +292,83 @@ async function openModule(id) {
 function renderItems(items) {
   const group = document.getElementById('list-group'); group.innerHTML = '';
   const isAdmin = currentUser.role === 'admin';
+  const mod = MODULES.find(m => m.id === currentMod);
   if (items.length === 0) return group.innerHTML = `<div style="text-align:center;padding:40px;color:gray;">No items found.</div>`;
+  
   items.forEach(item => {
-    const el = document.createElement('div'); el.className = 'list-item';
-    const actions = isAdmin ? `<div class="item-actions"><button class="btn-icon" onclick="openEditModal('${item._id}')">✎</button><button class="btn-icon" onclick="deleteItem('${item._id}')">✕</button></div>` : '';
-    el.innerHTML = `<div class="list-icon">${item.icon||'📌'}</div><div class="list-info"><div class="list-name">${item.name}</div><div class="list-meta">${item.meta||''}</div></div>${actions}`;
+    const el = document.createElement('div'); el.className = 'list-item' + (isAdmin ? '' : ' clickable');
+    
+    // 如果是管理员，显示编辑/删除按钮；如果是普通用户，显示箭头
+    const rightSide = isAdmin 
+      ? `<div class="item-actions"><button class="btn-icon" onclick="openEditModal('${item._id}')">✎</button><button class="btn-icon" onclick="deleteItem('${item._id}')">✕</button></div>`
+      : `<span style="color:var(--text-muted); font-size: 18px;">›</span>`;
+    
+    el.innerHTML = `<div class="list-icon">${item.icon||'📌'}</div><div class="list-info"><div class="list-name">${item.name}</div><div class="list-meta">${item.meta||''}</div></div>${rightSide}`;
+    
+    // 普通用户点击卡片，会跳出详情与下载弹窗
+    if (!isAdmin) {
+      el.onclick = () => openViewModal(item, mod.ctaLabel);
+    }
     group.appendChild(el);
   });
 }
 
-function openAddModal() { editingId = null; document.getElementById('edit-modal-title').textContent = 'Add Item'; document.getElementById('ef-icon').value = ''; document.getElementById('ef-name').value = ''; document.getElementById('ef-meta').value = ''; openOverlay('edit-overlay'); }
+// ---- 普通用户的专属查看弹窗 ----
+function openViewModal(item, ctaLabel) {
+  document.getElementById('vm-icon').textContent  = item.icon || '📌';
+  document.getElementById('vm-title').textContent = item.name;
+  document.getElementById('vm-meta').textContent  = item.meta  || '';
+  
+  // 如果后台填了 URL，就在描述里暗示一下
+  document.getElementById('vm-desc').textContent  = "Click the button below to access the link.";
+  
+  const cta = document.getElementById('vm-cta');
+  cta.textContent = ctaLabel;
+  cta.onclick = () => {
+    if (item.url) {
+      // 核心功能：如果有链接，点击后在新标签页打开！
+      window.open(item.url, '_blank'); 
+    } else {
+      alert("⚠️ Admin has not provided a link for this item yet.");
+    }
+    closeOverlay('view-overlay');
+  };
+  openOverlay('view-overlay');
+}
+
+function openAddModal() { 
+  editingId = null; 
+  document.getElementById('edit-modal-title').textContent = 'Add Item'; 
+  document.getElementById('ef-icon').value = ''; 
+  document.getElementById('ef-name').value = ''; 
+  document.getElementById('ef-meta').value = ''; 
+  document.getElementById('ef-url').value = ''; 
+  openOverlay('edit-overlay'); 
+}
+
 function openEditModal(id) {
   const item = allItems.find(i => i._id === id); if (!item) return; editingId = id;
   document.getElementById('edit-modal-title').textContent = 'Edit Item';
-  document.getElementById('ef-icon').value = item.icon || ''; document.getElementById('ef-name').value = item.name || ''; document.getElementById('ef-meta').value = item.meta || '';
+  document.getElementById('ef-icon').value = item.icon || ''; 
+  document.getElementById('ef-name').value = item.name || ''; 
+  document.getElementById('ef-meta').value = item.meta || '';
+  document.getElementById('ef-url').value = item.url || '';
   openOverlay('edit-overlay');
 }
 
 async function saveItem() {
-  const icon = document.getElementById('ef-icon').value.trim() || '📌', name = document.getElementById('ef-name').value.trim(), meta = document.getElementById('ef-meta').value.trim();
+  const icon = document.getElementById('ef-icon').value.trim() || '📌';
+  const name = document.getElementById('ef-name').value.trim();
+  const meta = document.getElementById('ef-meta').value.trim();
+  const url  = document.getElementById('ef-url').value.trim(); // 获取网址输入框的值
+  
   if (!name) return alert('Name required');
   try {
     if (editingId) {
-      const updated = await api('PATCH', '/items/' + editingId, { icon, name, meta });
+      const updated = await api('PATCH', '/items/' + editingId, { icon, name, meta, url });
       allItems[allItems.findIndex(i => i._id === editingId)] = updated;
     } else {
-      const created = await api('POST', '/items', { moduleId: currentMod, icon, name, meta });
+      const created = await api('POST', '/items', { moduleId: currentMod, icon, name, meta, url });
       allItems.push(created);
     }
     closeOverlay('edit-overlay'); renderItems(allItems);
