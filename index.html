@@ -4,113 +4,453 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Nexus Portal</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0c0f14; --surface: #13161d; --surface2: #1a1e28;
-    --border: rgba(255,255,255,0.07); --border-hover: rgba(255,255,255,0.14);
-    --accent: #4f8ef7; --accent-dim: rgba(79,142,247,0.12); --accent-glow: rgba(79,142,247,0.25);
-    --green: #34d399; --red: #f87171; --amber: #fbbf24;
-    --text-primary: #e8eaf0; --text-secondary: #6b7280; --text-muted: #3d4452;
-    --radius: 8px;
+    --bg: #080a0f;
+    --surface: #0e1118;
+    --surface2: #151820;
+    --surface3: #1c2030;
+    --border: rgba(255,255,255,0.06);
+    --border-hover: rgba(255,255,255,0.12);
+    --accent: #4f8ef7;
+    --accent-dim: rgba(79,142,247,0.1);
+    --accent-glow: rgba(79,142,247,0.3);
+    --green: #3ecf8e;
+    --red: #f87171;
+    --amber: #fbbf24;
+    --cyan: #22d3ee;
+    --purple: #a78bfa;
+    --text-primary: #e8eaf2;
+    --text-secondary: #5a6278;
+    --text-muted: #2e3446;
+    --radius: 10px;
+    --mod-0: #4f8ef7;
+    --mod-1: #3ecf8e;
+    --mod-2: #a78bfa;
   }
+ 
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: var(--bg); color: var(--text-primary); font-family: 'Inter', sans-serif; min-height: 100vh; -webkit-font-smoothing: antialiased; }
-  .page { display: flex; min-height: 100vh; }
+ 
+  body {
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+ 
+  /* ── Noise overlay ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.6;
+  }
+ 
+  .page { display: flex; min-height: 100vh; position: relative; z-index: 1; }
   .hidden { display: none !important; }
-
-  /* Topbar */
-  .topbar { position: fixed; top: 0; left: 0; right: 0; height: 52px; background: rgba(12,15,20,0.9); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 24px; justify-content: space-between; z-index: 100; }
-  .topbar-logo { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 600; }
-  .logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
-  .topbar-right { display: flex; align-items: center; gap: 14px; }
-  .topbar-user { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text-secondary); }
-  .role-badge { padding: 2px 8px; border-radius: 4px; font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 500; }
-  .role-badge.admin { background: rgba(251,191,36,0.15); color: var(--amber); border: 1px solid rgba(251,191,36,0.25); }
-  .role-badge.user  { background: rgba(79,142,247,0.12);  color: #6ba3ff;    border: 1px solid rgba(79,142,247,0.2); }
-  .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text-secondary); font-size: 12px; padding: 5px 14px; border-radius: var(--radius); cursor: pointer; }
-  .btn-ghost:hover { border-color: var(--border-hover); color: var(--text-primary); background: var(--surface); }
-
-  /* Login */
-  #login-page { align-items: center; justify-content: center; flex-direction: column; background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(79,142,247,0.08) 0%, transparent 60%); }
-  .login-wrap { width: 100%; max-width: 400px; padding: 20px; }
+ 
+  /* ── Grid background ── */
+  .grid-bg {
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(79,142,247,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(79,142,247,0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+ 
+  /* ── Ambient orbs ── */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .orb-1 { width: 500px; height: 500px; background: radial-gradient(circle, rgba(79,142,247,0.07) 0%, transparent 70%); top: -150px; right: -100px; animation: drift1 18s ease-in-out infinite; }
+  .orb-2 { width: 400px; height: 400px; background: radial-gradient(circle, rgba(167,139,250,0.05) 0%, transparent 70%); bottom: -100px; left: -80px; animation: drift2 22s ease-in-out infinite; }
+  .orb-3 { width: 300px; height: 300px; background: radial-gradient(circle, rgba(62,207,142,0.04) 0%, transparent 70%); top: 40%; left: 40%; animation: drift3 16s ease-in-out infinite; }
+ 
+  @keyframes drift1 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-40px, 30px); } }
+  @keyframes drift2 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(30px,-40px); } }
+  @keyframes drift3 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-20px,20px) scale(1.1); } }
+ 
+  /* ── Topbar ── */
+  .topbar {
+    position: fixed; top: 0; left: 0; right: 0; height: 54px;
+    background: rgba(8,10,15,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center;
+    padding: 0 28px; justify-content: space-between;
+    z-index: 100;
+  }
+  .topbar-logo { display: flex; align-items: center; gap: 10px; font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: 0.04em; }
+  .logo-mark {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, var(--accent), var(--purple));
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    box-shadow: 0 0 16px rgba(79,142,247,0.3);
+    animation: pulse-logo 3s ease-in-out infinite;
+  }
+  @keyframes pulse-logo { 0%,100% { box-shadow: 0 0 16px rgba(79,142,247,0.3); } 50% { box-shadow: 0 0 24px rgba(79,142,247,0.5); } }
+ 
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .topbar-user { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-secondary); }
+  .role-badge { padding: 3px 9px; border-radius: 5px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 500; }
+  .role-badge.admin { background: rgba(251,191,36,0.12); color: var(--amber); border: 1px solid rgba(251,191,36,0.2); }
+  .role-badge.user { background: rgba(79,142,247,0.1); color: #7ab3ff; border: 1px solid rgba(79,142,247,0.18); }
+  .btn-ghost {
+    background: transparent; border: 1px solid var(--border); color: var(--text-secondary);
+    font-size: 12px; font-family: 'DM Sans', sans-serif;
+    padding: 5px 14px; border-radius: var(--radius); cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-ghost:hover { border-color: var(--border-hover); color: var(--text-primary); background: var(--surface2); }
+ 
+  /* ── Login ── */
+  #login-page {
+    align-items: center; justify-content: center; flex-direction: column;
+  }
+  .login-wrap { width: 100%; max-width: 400px; padding: 20px; position: relative; z-index: 2; }
   .login-logo { text-align: center; margin-bottom: 32px; }
-  .login-logo-mark { width: 44px; height: 44px; border-radius: 12px; background: var(--surface2); border: 1px solid var(--border-hover); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 20px; }
-  .login-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px 32px; box-shadow: 0 24px 80px rgba(0,0,0,0.4); }
+  .login-logo-mark {
+    width: 52px; height: 52px; border-radius: 14px;
+    background: linear-gradient(135deg, rgba(79,142,247,0.2), rgba(167,139,250,0.2));
+    border: 1px solid rgba(79,142,247,0.25);
+    display: flex; align-items: center; justify-content: center; margin: 0 auto 14px;
+    font-size: 24px;
+    box-shadow: 0 0 32px rgba(79,142,247,0.15);
+  }
+  .login-logo-name { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 700; letter-spacing: 0.08em; }
+  .login-logo-sub { font-size: 12px; color: var(--text-secondary); margin-top: 4px; font-family: 'IBM Plex Mono', monospace; }
+ 
+  .login-card {
+    background: rgba(14,17,24,0.9);
+    border: 1px solid var(--border-hover);
+    border-radius: 16px;
+    padding: 30px 32px;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+    backdrop-filter: blur(16px);
+    animation: card-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  @keyframes card-in { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+ 
   .field { margin-bottom: 16px; }
-  .field label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; }
-  .field input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-primary); padding: 10px 14px; outline: none; }
-  .field input:focus { border-color: rgba(79,142,247,0.5); box-shadow: 0 0 0 3px var(--accent-dim); }
-  .btn-primary { width: 100%; padding: 10px 16px; background: var(--accent); border: none; border-radius: var(--radius); color: #fff; font-size: 14px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
-  .btn-primary:hover { background: #6ba3ff; box-shadow: 0 4px 20px var(--accent-glow); }
-  .login-tabs { display: flex; gap: 0; margin-bottom: 22px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-  .login-tab { flex: 1; padding: 8px; background: transparent; border: none; color: var(--text-secondary); font-size: 13px; font-weight: 500; cursor: pointer; }
-  .login-tab.active { background: var(--surface2); color: var(--text-primary); }
+  .field label { display: block; font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 7px; font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; letter-spacing: 0.06em; }
+  .field input {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius); color: var(--text-primary);
+    padding: 10px 14px; outline: none; font-family: 'DM Sans', sans-serif; font-size: 14px;
+    transition: all 0.2s;
+  }
+  .field input:focus { border-color: rgba(79,142,247,0.4); box-shadow: 0 0 0 3px rgba(79,142,247,0.08); background: var(--surface3); }
+  .field input::placeholder { color: var(--text-muted); }
+ 
+  .btn-primary {
+    width: 100%; padding: 11px 16px;
+    background: linear-gradient(135deg, var(--accent), #6ba3ff);
+    border: none; border-radius: var(--radius); color: #fff;
+    font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: all 0.2s; position: relative; overflow: hidden;
+  }
+  .btn-primary::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+    opacity: 0; transition: opacity 0.2s;
+  }
+  .btn-primary:hover::after { opacity: 1; }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px var(--accent-glow); }
+  .btn-primary:active { transform: translateY(0); }
+ 
+  .login-tabs { display: flex; gap: 0; margin-bottom: 24px; background: var(--surface2); border-radius: var(--radius); padding: 3px; }
+  .login-tab {
+    flex: 1; padding: 8px; background: transparent; border: none; color: var(--text-secondary);
+    font-size: 13px; font-weight: 500; cursor: pointer; border-radius: 7px;
+    font-family: 'DM Sans', sans-serif; transition: all 0.2s;
+  }
+  .login-tab.active { background: var(--surface3); color: var(--text-primary); box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
   .tab-panel { display: none; }
-  .tab-panel.active { display: block; }
-  .api-error { display: none; background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.2); border-radius: 6px; padding: 10px 14px; font-size: 13px; color: var(--red); margin-bottom: 16px; }
+  .tab-panel.active { display: block; animation: tab-in 0.25s ease both; }
+  @keyframes tab-in { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: translateX(0); } }
+  .api-error { display: none; background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.18); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--red); margin-bottom: 16px; }
   .api-error.show { display: block; }
   .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* Dashboard */
-  #dashboard-page, #detail-page { flex-direction: column; padding-top: 52px; }
-  .dash-content { max-width: 980px; margin: 0 auto; padding: 48px 24px 60px; width: 100%; }
-  .dash-title { font-size: 26px; font-weight: 600; margin-bottom: 6px; }
-  .dash-desc { font-size: 14px; color: var(--text-secondary); margin-bottom: 34px;}
-  .modules-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
-  .module-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; cursor: pointer; transition: all 0.2s; }
-  .module-card:hover { border-color: var(--border-hover); transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,0,0,0.3); }
-  .card-icon-wrap { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; font-size: 17px; background: var(--surface2); border: 1px solid var(--border); }
-  .card-name { font-size: 14px; font-weight: 600; margin-bottom: 5px; }
-  .card-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.55; }
-  .card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
-  .card-count { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-muted); }
-  
-  /* Detail Page & Lists */
-  .detail-content { max-width: 820px; margin: 0 auto; padding: 44px 24px 60px; width: 100%; }
-  .detail-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
-  .btn-add { padding: 8px 16px; background: var(--accent); border: none; border-radius: var(--radius); color: #fff; font-size: 13px; font-weight: 500; cursor: pointer; }
-  .btn-add:hover { background: #6ba3ff; box-shadow: 0 4px 16px var(--accent-glow); }
-  .list-group { display: flex; flex-direction: column; gap: 6px; }
-  .list-item { display: flex; align-items: center; gap: 14px; padding: 13px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
-  .list-item:hover { border-color: var(--border-hover); background: var(--surface2); }
-  .list-icon { width: 36px; height: 36px; border-radius: 8px; background: var(--surface2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 16px; }
-  .list-info { flex: 1; }
-  .list-name { font-size: 14px; font-weight: 500; margin-bottom: 3px; }
-  .list-meta { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-muted); }
+ 
+  /* ── Dashboard ── */
+  #dashboard-page, #detail-page { flex-direction: column; padding-top: 54px; }
+  .dash-content { max-width: 1020px; margin: 0 auto; padding: 52px 28px 80px; width: 100%; position: relative; z-index: 2; }
+ 
+  .dash-eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--accent); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 10px; }
+  .dash-title { font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.02em; }
+  .dash-title span { background: linear-gradient(135deg, #fff 30%, rgba(79,142,247,0.8)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .dash-desc { font-size: 14px; color: var(--text-secondary); margin-bottom: 42px; }
+ 
+  /* ── Module Cards ── */
+  .modules-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
+ 
+  .module-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    overflow: hidden;
+    animation: card-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .module-card:nth-child(1) { animation-delay: 0.05s; --mod-color: var(--mod-0); }
+  .module-card:nth-child(2) { animation-delay: 0.1s;  --mod-color: var(--mod-1); }
+  .module-card:nth-child(3) { animation-delay: 0.15s; --mod-color: var(--mod-2); }
+ 
+  @keyframes card-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+ 
+  /* Top accent line */
+  .module-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--mod-color), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  /* Glow on hover */
+  .module-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 30% 0%, color-mix(in srgb, var(--mod-color) 8%, transparent), transparent 60%);
+    opacity: 0;
+    transition: opacity 0.4s;
+    pointer-events: none;
+  }
+  .module-card:hover { border-color: rgba(255,255,255,0.1); transform: translateY(-4px); box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+  .module-card:hover::before { opacity: 1; }
+  .module-card:hover::after { opacity: 1; }
+ 
+  .card-icon-wrap {
+    width: 42px; height: 42px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 16px; font-size: 18px;
+    background: color-mix(in srgb, var(--mod-color) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--mod-color) 25%, transparent);
+    color: var(--mod-color);
+    transition: all 0.3s;
+  }
+  .module-card:hover .card-icon-wrap { transform: scale(1.05); box-shadow: 0 4px 16px color-mix(in srgb, var(--mod-color) 20%, transparent); }
+ 
+  .card-name { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; margin-bottom: 7px; letter-spacing: 0.01em; }
+  .card-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+  .card-arrow {
+    display: inline-flex; align-items: center;
+    margin-top: 18px; font-size: 12px; font-family: 'IBM Plex Mono', monospace;
+    color: var(--mod-color); opacity: 0; transform: translateX(-6px);
+    transition: all 0.3s; letter-spacing: 0.04em;
+  }
+  .module-card:hover .card-arrow { opacity: 1; transform: translateX(0); }
+ 
+  /* ── Detail Page ── */
+  .detail-content { max-width: 820px; margin: 0 auto; padding: 48px 28px 80px; width: 100%; position: relative; z-index: 2; }
+  .detail-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
+  .detail-eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-secondary); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; }
+  .detail-title { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 800; letter-spacing: -0.01em; }
+  .detail-sub { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+ 
+  .btn-add {
+    padding: 9px 18px;
+    background: linear-gradient(135deg, var(--accent), #6ba3ff);
+    border: none; border-radius: var(--radius); color: #fff;
+    font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-add:hover { transform: translateY(-1px); box-shadow: 0 6px 18px var(--accent-glow); }
+ 
+  /* ── List Items ── */
+  .list-group { display: flex; flex-direction: column; gap: 8px; }
+  .list-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative; overflow: hidden;
+    animation: item-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .list-item:nth-child(1) { animation-delay: 0.03s; }
+  .list-item:nth-child(2) { animation-delay: 0.06s; }
+  .list-item:nth-child(3) { animation-delay: 0.09s; }
+  .list-item:nth-child(4) { animation-delay: 0.12s; }
+  .list-item:nth-child(5) { animation-delay: 0.15s; }
+ 
+  @keyframes item-in { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: translateX(0); } }
+ 
+  /* Left hover accent */
+  .list-item::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 3px; background: var(--accent);
+    transform: scaleY(0); transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    border-radius: 0 2px 2px 0;
+  }
+  .list-item:hover { border-color: var(--border-hover); background: var(--surface2); transform: translateX(4px); }
+  .list-item:hover::before { transform: scaleY(1); }
+ 
+  .list-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: var(--surface2); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
+    flex-shrink: 0; transition: all 0.25s;
+  }
+  .list-item:hover .list-icon { transform: scale(1.05); border-color: var(--border-hover); }
+ 
+  .list-info { flex: 1; min-width: 0; }
+  .list-name { font-size: 14px; font-weight: 500; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .list-meta { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-muted); }
   .item-actions { display: flex; gap: 6px; }
-  .btn-icon { width: 30px; height: 30px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface2); color: var(--text-secondary); cursor: pointer; }
-  .btn-icon:hover { color: var(--text-primary); border-color: var(--border-hover); }
-
-  /* Modals */
-  .overlay { display: none; position: fixed; inset: 0; background: rgba(6,8,12,0.75); backdrop-filter: blur(6px); z-index: 200; align-items: center; justify-content: center; padding: 20px; }
+  .btn-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--surface2);
+    color: var(--text-secondary); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: 13px;
+    transition: all 0.2s;
+  }
+  .btn-icon:hover { color: var(--text-primary); border-color: var(--border-hover); background: var(--surface3); transform: scale(1.05); }
+  .btn-icon.danger:hover { color: var(--red); border-color: rgba(248,113,113,0.3); background: rgba(248,113,113,0.08); }
+ 
+  /* ── Skeleton ── */
+  .skeleton-item { padding: 14px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; display: flex; align-items: center; gap: 14px; }
+  .sk { background: linear-gradient(90deg, var(--surface2) 25%, var(--surface3) 50%, var(--surface2) 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 6px; }
+  @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+  .sk-icon { width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0; }
+  .sk-lines { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+  .sk-line-a { height: 13px; width: 55%; }
+  .sk-line-b { height: 10px; width: 30%; }
+ 
+  /* ── Modals ── */
+  .overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(4,6,10,0.8);
+    backdrop-filter: blur(8px);
+    z-index: 200; align-items: center; justify-content: center; padding: 20px;
+  }
   .overlay.show { display: flex; }
-  .modal { background: var(--surface); border: 1px solid var(--border-hover); border-radius: 12px; width: 100%; max-width: 460px; padding: 28px; box-shadow: 0 32px 80px rgba(0,0,0,0.5); }
+  .overlay.show .modal { animation: modal-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both; }
+ 
+  @keyframes modal-in {
+    from { opacity: 0; transform: scale(0.92) translateY(16px); }
+    to   { opacity: 1; transform: scale(1)    translateY(0); }
+  }
+ 
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border-hover);
+    border-radius: 16px; width: 100%; max-width: 460px; padding: 30px;
+    box-shadow: 0 40px 100px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+    position: relative;
+  }
+  .modal-header { margin-bottom: 24px; }
+  .modal-title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; }
+  .modal-divider { height: 1px; background: var(--border); margin-bottom: 20px; }
+ 
   .form-field { margin-bottom: 14px; }
-  .form-field label { display: block; font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px; }
-  .form-field input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-primary); padding: 8px 12px; outline: none; }
-  .modal-actions { display: flex; gap: 8px; margin-top: 20px; }
-  .btn-modal-primary { flex: 1; padding: 9px 16px; background: var(--accent); border: none; border-radius: var(--radius); color: #fff; cursor: pointer; }
-  .btn-modal-secondary { padding: 9px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-secondary); cursor: pointer; }
-
-  /* View Modal (For normal users) */
-  #vm-icon { font-size: 24px; margin-bottom: 12px; }
-  #vm-title { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
-  #vm-meta { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
-  #vm-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.6; padding: 12px; background: var(--surface2); border-radius: 6px; margin-bottom: 20px; }
-
-  /* Toast */
-  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface2); border: 1px solid var(--border-hover); border-radius: 10px; padding: 12px 16px; box-shadow: 0 16px 40px rgba(0,0,0,0.4); transform: translateY(20px); opacity: 0; transition: all 0.3s; z-index: 300; display: flex; gap: 10px; }
-  .toast.show { transform: translateY(0); opacity: 1; }
+  .form-field label { display: block; font-size: 11px; font-weight: 500; color: var(--text-secondary); margin-bottom: 7px; font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; letter-spacing: 0.06em; }
+  .form-field input {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius); color: var(--text-primary);
+    padding: 9px 13px; outline: none; font-family: 'DM Sans', sans-serif; font-size: 14px;
+    transition: all 0.2s;
+  }
+  .form-field input:focus { border-color: rgba(79,142,247,0.4); box-shadow: 0 0 0 3px rgba(79,142,247,0.07); background: var(--surface3); }
+  .modal-actions { display: flex; gap: 8px; margin-top: 22px; }
+  .btn-modal-primary {
+    flex: 1; padding: 10px 16px;
+    background: linear-gradient(135deg, var(--accent), #6ba3ff);
+    border: none; border-radius: var(--radius); color: #fff;
+    font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif;
+    transition: all 0.2s;
+  }
+  .btn-modal-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 18px var(--accent-glow); }
+  .btn-modal-secondary {
+    padding: 10px 16px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius); color: var(--text-secondary); cursor: pointer;
+    font-family: 'DM Sans', sans-serif; font-size: 13px; transition: all 0.2s;
+  }
+  .btn-modal-secondary:hover { background: var(--surface3); color: var(--text-primary); border-color: var(--border-hover); }
+ 
+  /* ── View Modal ── */
+  .vm-icon-wrap {
+    width: 52px; height: 52px; border-radius: 14px;
+    background: var(--surface2); border: 1px solid var(--border-hover);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; margin-bottom: 16px;
+  }
+  #vm-title { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+  #vm-meta { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-muted); margin-bottom: 18px; }
+  #vm-desc {
+    font-size: 13px; color: var(--text-secondary); line-height: 1.65;
+    padding: 14px 16px; background: var(--surface2); border-radius: 10px;
+    margin-bottom: 22px; border: 1px solid var(--border);
+  }
+ 
+  /* Confirm Modal */
+  #confirm-overlay .modal { max-width: 360px; }
+  .confirm-icon { font-size: 32px; margin-bottom: 12px; }
+  .confirm-title { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+  .confirm-msg { font-size: 13px; color: var(--text-secondary); }
+  .btn-danger { flex: 1; padding: 10px 16px; background: rgba(248,113,113,0.15); border: 1px solid rgba(248,113,113,0.3); border-radius: var(--radius); color: var(--red); cursor: pointer; font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif; transition: all 0.2s; }
+  .btn-danger:hover { background: rgba(248,113,113,0.25); transform: translateY(-1px); }
+ 
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 28px; right: 28px;
+    background: var(--surface2);
+    border: 1px solid var(--border-hover);
+    border-radius: 12px; padding: 14px 18px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    transform: translateY(30px) scale(0.95); opacity: 0;
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 300; display: flex; gap: 12px; align-items: center;
+    min-width: 240px;
+    pointer-events: none;
+  }
+  .toast.show { transform: translateY(0) scale(1); opacity: 1; pointer-events: auto; }
+  .toast-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .toast-dot.success { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .toast-dot.error { background: var(--red); box-shadow: 0 0 8px var(--red); }
+  .toast-dot.info { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  .toast-title { font-size: 13px; font-weight: 600; }
+  .toast-msg { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
 </style>
 </head>
 <body>
-
+ 
+<div class="grid-bg"></div>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+ 
+<!-- Login -->
 <div class="page" id="login-page">
   <div class="login-wrap">
     <div class="login-logo">
-      <div class="login-logo-mark">⬡</div><div class="login-logo-name">Nexus</div>
+      <div class="login-logo-mark">⬡</div>
+      <div class="login-logo-name">NEXUS</div>
+      <div class="login-logo-sub">Secure portal access</div>
     </div>
     <div class="login-card">
       <div class="login-tabs">
@@ -119,26 +459,25 @@
       </div>
       <div class="api-error" id="api-error-login"></div>
       <div class="api-error" id="api-error-register"></div>
-      
       <div class="tab-panel active" id="tab-login">
-        <div class="field"><label>Email</label><input type="email" id="login-email" placeholder="xxx@email.com"></div>
+        <div class="field"><label>Email</label><input type="email" id="login-email" placeholder="you@example.com"></div>
         <div class="field"><label>Password</label><input type="password" id="login-pass" placeholder="••••••••"></div>
-        <button class="btn-primary" id="login-btn" onclick="doLogin()">Sign in</button>
+        <button class="btn-primary" id="login-btn" onclick="doLogin()">Sign in →</button>
       </div>
-
       <div class="tab-panel" id="tab-register">
         <div class="field"><label>Name</label><input type="text" id="reg-name" placeholder="Your name"></div>
-        <div class="field"><label>Email</label><input type="email" id="reg-email" placeholder="xxx@email.com"></div>
+        <div class="field"><label>Email</label><input type="email" id="reg-email" placeholder="you@example.com"></div>
         <div class="field"><label>Password</label><input type="password" id="reg-pass" placeholder="Min. 6 chars"></div>
-        <button class="btn-primary" id="register-btn" onclick="doRegister()">Create account</button>
+        <button class="btn-primary" id="register-btn" onclick="doRegister()">Create account →</button>
       </div>
     </div>
   </div>
 </div>
-
+ 
+<!-- Dashboard -->
 <div class="page hidden" id="dashboard-page">
   <nav class="topbar">
-    <div class="topbar-logo"><div class="logo-dot"></div>Nexus</div>
+    <div class="topbar-logo"><div class="logo-mark">⬡</div>NEXUS</div>
     <div class="topbar-right">
       <span class="topbar-user" id="nav-user">—</span>
       <span class="role-badge" id="nav-role-badge">—</span>
@@ -146,105 +485,115 @@
     </div>
   </nav>
   <div class="dash-content">
+    <div class="dash-eyebrow">// PORTAL</div>
     <div class="dash-title">Welcome, <span id="dash-name">there</span>.</div>
-    <div class="dash-desc">Select a module below to get started.</div>
+    <div class="dash-desc">Select a module to continue.</div>
     <div class="modules-grid" id="modules-grid"></div>
   </div>
 </div>
-
+ 
+<!-- Detail -->
 <div class="page hidden" id="detail-page">
   <nav class="topbar">
-    <div class="topbar-logo"><div class="logo-dot"></div>Nexus</div>
+    <div class="topbar-logo"><div class="logo-mark">⬡</div>NEXUS</div>
     <div class="topbar-right"><button class="btn-ghost" onclick="goBack()">← Back</button></div>
   </nav>
   <div class="detail-content">
     <div class="detail-head">
       <div>
-        <h2 id="detail-title">Module</h2>
-        <p id="detail-subtitle" style="color:var(--text-secondary);font-size:13px;"></p>
+        <div class="detail-eyebrow" id="detail-eyebrow">MODULE</div>
+        <h2 class="detail-title" id="detail-title">Module</h2>
+        <p class="detail-sub" id="detail-subtitle"></p>
       </div>
       <button class="btn-add hidden" id="add-item-btn" onclick="openAddModal()">+ Add Item</button>
     </div>
     <div class="list-group" id="list-group"></div>
   </div>
 </div>
-
+ 
+<!-- Edit/Add Modal -->
 <div class="overlay" id="edit-overlay" onclick="closeOverlay('edit-overlay')">
   <div class="modal" onclick="event.stopPropagation()">
-    <h3 style="margin-bottom: 20px;" id="edit-modal-title">Add Item</h3>
+    <div class="modal-header">
+      <div class="modal-title" id="edit-modal-title">Add Item</div>
+    </div>
+    <div class="modal-divider"></div>
     <div class="form-field"><label>Icon (emoji)</label><input type="text" id="ef-icon" placeholder="🚀"></div>
     <div class="form-field"><label>Name</label><input type="text" id="ef-name" placeholder="Item Name"></div>
     <div class="form-field"><label>Description / Meta</label><input type="text" id="ef-meta" placeholder="Details..."></div>
-    <div class="form-field"><label>Download URL / Link (Optional)</label><input type="url" id="ef-url" placeholder="https://drive.google.com/..."></div>
-    
+    <div class="form-field"><label>Download URL / Link (Optional)</label><input type="url" id="ef-url" placeholder="https://..."></div>
     <div class="modal-actions">
       <button class="btn-modal-primary" id="edit-confirm-btn" onclick="saveItem()">Save</button>
       <button class="btn-modal-secondary" onclick="closeOverlay('edit-overlay')">Cancel</button>
     </div>
   </div>
 </div>
-
+ 
+<!-- View Modal -->
 <div class="overlay" id="view-overlay" onclick="closeOverlay('view-overlay')">
   <div class="modal" onclick="event.stopPropagation()">
-    <div id="vm-icon">📌</div>
+    <div class="vm-icon-wrap"><div id="vm-icon">📌</div></div>
     <div id="vm-title">Item Name</div>
     <div id="vm-meta">Meta data</div>
     <div id="vm-desc">No description available.</div>
     <div class="modal-actions">
-      <button class="btn-modal-primary" id="vm-cta">Download Link</button>
+      <button class="btn-modal-primary" id="vm-cta">Open Link</button>
       <button class="btn-modal-secondary" onclick="closeOverlay('view-overlay')">Close</button>
     </div>
   </div>
 </div>
-
-<div class="toast" id="toast">
-  <div id="toast-icon">✓</div>
-  <div>
-    <div style="font-size: 13px; font-weight: 600;" id="toast-title">—</div>
-    <div style="font-size: 12px; color: var(--text-secondary);" id="toast-msg">—</div>
+ 
+<!-- Confirm Delete Modal -->
+<div class="overlay" id="confirm-overlay" onclick="closeOverlay('confirm-overlay')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="confirm-icon">🗑️</div>
+    <div class="confirm-title">Delete this item?</div>
+    <div class="confirm-msg" style="margin-bottom: 24px;">This action cannot be undone. The item will be permanently removed.</div>
+    <div class="modal-actions">
+      <button class="btn-danger" id="confirm-delete-btn">Delete</button>
+      <button class="btn-modal-secondary" onclick="closeOverlay('confirm-overlay')">Cancel</button>
+    </div>
   </div>
 </div>
-
+ 
+<!-- Toast -->
+<div class="toast" id="toast">
+  <div class="toast-dot" id="toast-dot"></div>
+  <div>
+    <div class="toast-title" id="toast-title">—</div>
+    <div class="toast-msg" id="toast-msg">—</div>
+  </div>
+</div>
+ 
 <script>
-// ─── Config ──────────────────────────────────────────────
 const API_BASE = 'https://nexus-api-server-ref0.onrender.com/api';
-
+ 
 const MODULES = [
-  { id:'downloads', icon:'↓', name:'App Downloads', desc:'Client apps, tools, and packages.', ctaLabel:'Download Now' },
-  { id:'tutorials', icon:'▶', name:'Tutorials',     desc:'Step-by-step guides and training.', ctaLabel:'Open Link' },
-  { id:'docs',      icon:'📄', name:'Documentation', desc:'Technical specs and architecture.', ctaLabel:'View Doc' },
+  { id:'downloads', icon:'↓', name:'App Downloads', desc:'Client apps, tools, and packages for your workflow.', ctaLabel:'Download Now' },
+  { id:'tutorials', icon:'▶', name:'Tutorials',     desc:'Step-by-step guides and hands-on training.', ctaLabel:'Open Link' },
+  { id:'docs',      icon:'📄', name:'Documentation', desc:'Technical specs, architecture, and references.', ctaLabel:'View Doc' },
 ];
-
-let currentUser = null, currentMod = null, allItems = [], editingId = null;
-
-// 🛡️ 核心改造：网络请求函数现在会携带身份证明
+ 
+let currentUser = null, currentMod = null, allItems = [], editingId = null, pendingDeleteId = null;
+ 
 async function api(method, path, body) {
-  const opts = { 
-      method, 
-      headers: { 'Content-Type': 'application/json' } 
-  };
-  
-  // 如果用户已登录，每次请求都把邮箱通过 Header 传给后端保安核实
-  if (currentUser && currentUser.email) {
-      opts.headers['X-User-Email'] = currentUser.email;
-  }
-
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (currentUser?.email) opts.headers['X-User-Email'] = currentUser.email;
   if (body) opts.body = JSON.stringify(body);
   const res  = await fetch(API_BASE + path, opts);
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data.success === false) throw new Error(data.message || 'Server error');
   return data;
 }
-
+ 
 function switchTab(tab) {
-  document.querySelectorAll('.login-tab').forEach((el, i) => el.classList.toggle('active', (i === 0 && tab === 'login') || (i === 1 && tab === 'register')));
-  document.getElementById('tab-login').classList.toggle('active', tab === 'login');
-  document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+  document.querySelectorAll('.login-tab').forEach((el, i) =>
+    el.classList.toggle('active', (i===0 && tab==='login') || (i===1 && tab==='register')));
+  document.getElementById('tab-login').classList.toggle('active', tab==='login');
+  document.getElementById('tab-register').classList.toggle('active', tab==='register');
   document.querySelectorAll('.api-error').forEach(e => e.classList.remove('show'));
 }
-
-// 🛡️ 核心改造：完全信任后端返回的 Role 权限
-// 🛡️ 登录：成功后自动清空
+ 
 async function doLogin() {
   const email = document.getElementById('login-email').value.trim();
   const pass  = document.getElementById('login-pass').value;
@@ -252,16 +601,12 @@ async function doLogin() {
     const response = await api('POST', '/login', { email, password: pass });
     currentUser = { name: email.split('@')[0].toUpperCase(), email: response.user.email, role: response.user.role };
     sessionStorage.setItem('nexus_user', JSON.stringify(currentUser));
-    
-    // 关键步骤：直接精准打击，清空输入框
     document.getElementById('login-email').value = '';
     document.getElementById('login-pass').value = '';
-    
     enterApp();
-  } catch (err) { alert(err.message); }
+  } catch (err) { showToast('error', 'Login failed', err.message); }
 }
-
-// 🛡️ 注册：成功后自动清空
+ 
 async function doRegister() {
   const email = document.getElementById('reg-email').value.trim();
   const pass  = document.getElementById('reg-pass').value;
@@ -270,30 +615,19 @@ async function doRegister() {
     const response = await api('POST', '/register', { email, password: pass });
     currentUser = { name: name.toUpperCase(), email: response.user.email, role: response.user.role };
     sessionStorage.setItem('nexus_user', JSON.stringify(currentUser));
-    
-    // 关键步骤：直接精准打击，清空输入框
     document.getElementById('reg-email').value = '';
     document.getElementById('reg-pass').value = '';
     document.getElementById('reg-name').value = '';
-    
     enterApp();
-  } catch (err) { alert(err.message); }
+  } catch (err) { showToast('error', 'Registration failed', err.message); }
 }
-
-// 🛡️ 登出：彻底打扫战场
-function logout() { 
-  sessionStorage.removeItem('nexus_user'); 
-  
-  // 确保所有格子的字都被擦掉
-  document.getElementById('login-email').value = '';
-  document.getElementById('login-pass').value = '';
-  document.getElementById('reg-email').value = '';
-  document.getElementById('reg-pass').value = '';
-  document.getElementById('reg-name').value = '';
-  
-  showPage('login-page'); 
+ 
+function logout() {
+  sessionStorage.removeItem('nexus_user');
+  ['login-email','login-pass','reg-email','reg-pass','reg-name'].forEach(id => document.getElementById(id).value = '');
+  showPage('login-page');
 }
-  
+ 
 function enterApp() {
   document.getElementById('nav-user').textContent = currentUser.email;
   document.getElementById('nav-role-badge').textContent = currentUser.role === 'admin' ? '⚡ ADMIN' : '👤 OP';
@@ -301,121 +635,188 @@ function enterApp() {
   document.getElementById('dash-name').textContent = currentUser.name;
   buildDashboard();
   showPage('dashboard-page');
+  showToast('success', 'Welcome back', currentUser.email);
 }
-
+ 
 function buildDashboard() {
-  const grid = document.getElementById('modules-grid'); grid.innerHTML = '';
+  const grid = document.getElementById('modules-grid');
+  grid.innerHTML = '';
   MODULES.forEach(mod => {
-    const card = document.createElement('div'); card.className = 'module-card';
-    card.innerHTML = `<div class="card-icon-wrap">${mod.icon}</div><div class="card-name">${mod.name}</div><div class="card-desc">${mod.desc}</div>`;
+    const card = document.createElement('div');
+    card.className = 'module-card';
+    card.innerHTML = `
+      <div class="card-icon-wrap">${mod.icon}</div>
+      <div class="card-name">${mod.name}</div>
+      <div class="card-desc">${mod.desc}</div>
+      <div class="card-arrow">Enter module →</div>
+    `;
     card.onclick = () => openModule(mod.id);
     grid.appendChild(card);
   });
 }
-
+ 
+function showSkeleton() {
+  const group = document.getElementById('list-group');
+  group.innerHTML = [1,2,3].map(() => `
+    <div class="skeleton-item">
+      <div class="sk sk-icon"></div>
+      <div class="sk-lines">
+        <div class="sk sk-line-a"></div>
+        <div class="sk sk-line-b"></div>
+      </div>
+    </div>`).join('');
+}
+ 
 async function openModule(id) {
-  currentMod = id; const mod = MODULES.find(m => m.id === id);
+  currentMod = id;
+  const mod = MODULES.find(m => m.id === id);
+  document.getElementById('detail-eyebrow').textContent = '// ' + id.toUpperCase();
   document.getElementById('detail-title').textContent = mod.name;
   document.getElementById('detail-subtitle').textContent = mod.desc;
   const addBtn = document.getElementById('add-item-btn');
   currentUser.role === 'admin' ? addBtn.classList.remove('hidden') : addBtn.classList.add('hidden');
   showPage('detail-page');
-  document.getElementById('list-group').innerHTML = 'Loading...';
+  showSkeleton();
   try {
     allItems = await api('GET', '/items/' + id);
     renderItems(allItems);
-  } catch (err) { document.getElementById('list-group').innerHTML = 'Error loading data.'; }
+  } catch (err) {
+    document.getElementById('list-group').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-secondary);">Error loading data.</div>';
+  }
 }
-
+ 
 function renderItems(items) {
-  const group = document.getElementById('list-group'); group.innerHTML = '';
+  const group = document.getElementById('list-group');
+  group.innerHTML = '';
   const isAdmin = currentUser.role === 'admin';
   const mod = MODULES.find(m => m.id === currentMod);
-  if (items.length === 0) return group.innerHTML = `<div style="text-align:center;padding:40px;color:gray;">No items found.</div>`;
-  
+  if (items.length === 0) {
+    group.innerHTML = `<div style="text-align:center;padding:60px 40px;color:var(--text-secondary);font-size:14px;">No items yet.</div>`;
+    return;
+  }
   items.forEach(item => {
-    const el = document.createElement('div'); el.className = 'list-item' + (isAdmin ? '' : ' clickable');
-    const rightSide = isAdmin 
-      ? `<div class="item-actions"><button class="btn-icon" onclick="openEditModal('${item._id}')">✎</button><button class="btn-icon" onclick="deleteItem('${item._id}')">✕</button></div>`
-      : `<span style="color:var(--text-muted); font-size: 18px;">›</span>`;
-    
-    el.innerHTML = `<div class="list-icon">${item.icon||'📌'}</div><div class="list-info"><div class="list-name">${item.name}</div><div class="list-meta">${item.meta||''}</div></div>${rightSide}`;
-    
-    if (!isAdmin) {
-      el.onclick = () => openViewModal(item, mod.ctaLabel);
-    }
+    const el = document.createElement('div');
+    el.className = 'list-item';
+    const rightSide = isAdmin
+      ? `<div class="item-actions">
+           <button class="btn-icon" onclick="openEditModal('${item._id}')" title="Edit">✎</button>
+           <button class="btn-icon danger" onclick="promptDelete('${item._id}')" title="Delete">✕</button>
+         </div>`
+      : `<span style="color:var(--text-muted); font-size:20px; margin-right:2px;">›</span>`;
+    el.innerHTML = `
+      <div class="list-icon">${item.icon||'📌'}</div>
+      <div class="list-info">
+        <div class="list-name">${item.name}</div>
+        <div class="list-meta">${item.meta||''}</div>
+      </div>
+      ${rightSide}`;
+    if (!isAdmin) el.onclick = () => openViewModal(item, mod.ctaLabel);
     group.appendChild(el);
   });
 }
-
+ 
 function openViewModal(item, ctaLabel) {
   document.getElementById('vm-icon').textContent  = item.icon || '📌';
   document.getElementById('vm-title').textContent = item.name;
   document.getElementById('vm-meta').textContent  = item.meta  || '';
-  document.getElementById('vm-desc').textContent  = "Click the button below to access the secure link.";
-  
+  document.getElementById('vm-desc').textContent  = 'Click the button below to access the secure link.';
   const cta = document.getElementById('vm-cta');
   cta.textContent = ctaLabel;
   cta.onclick = () => {
-    if (item.url) window.open(item.url, '_blank'); 
-    else alert("⚠️ Admin has not provided a link for this item yet.");
+    if (item.url) window.open(item.url, '_blank');
+    else showToast('info', 'No link', 'Admin has not added a link for this item yet.');
     closeOverlay('view-overlay');
   };
   openOverlay('view-overlay');
 }
-
-function openAddModal() { 
-  editingId = null; document.getElementById('edit-modal-title').textContent = 'Add Item'; 
-  document.getElementById('ef-icon').value = ''; document.getElementById('ef-name').value = ''; 
-  document.getElementById('ef-meta').value = ''; document.getElementById('ef-url').value = ''; 
-  openOverlay('edit-overlay'); 
+ 
+function promptDelete(id) {
+  pendingDeleteId = id;
+  document.getElementById('confirm-delete-btn').onclick = () => {
+    closeOverlay('confirm-overlay');
+    deleteItem(pendingDeleteId);
+  };
+  openOverlay('confirm-overlay');
 }
-
-function openEditModal(id) {
-  const item = allItems.find(i => i._id === id); if (!item) return; editingId = id;
-  document.getElementById('edit-modal-title').textContent = 'Edit Item';
-  document.getElementById('ef-icon').value = item.icon || ''; document.getElementById('ef-name').value = item.name || ''; 
-  document.getElementById('ef-meta').value = item.meta || ''; document.getElementById('ef-url').value = item.url || '';
+ 
+function openAddModal() {
+  editingId = null;
+  document.getElementById('edit-modal-title').textContent = 'Add Item';
+  ['ef-icon','ef-name','ef-meta','ef-url'].forEach(id => document.getElementById(id).value = '');
   openOverlay('edit-overlay');
 }
-
+ 
+function openEditModal(id) {
+  const item = allItems.find(i => i._id === id); if (!item) return;
+  editingId = id;
+  document.getElementById('edit-modal-title').textContent = 'Edit Item';
+  document.getElementById('ef-icon').value = item.icon || '';
+  document.getElementById('ef-name').value = item.name || '';
+  document.getElementById('ef-meta').value = item.meta || '';
+  document.getElementById('ef-url').value  = item.url  || '';
+  openOverlay('edit-overlay');
+}
+ 
 async function saveItem() {
-  const icon = document.getElementById('ef-icon').value.trim() || '📌', name = document.getElementById('ef-name').value.trim();
-  const meta = document.getElementById('ef-meta').value.trim(), url  = document.getElementById('ef-url').value.trim();
-  if (!name) return alert('Name required');
+  const icon = document.getElementById('ef-icon').value.trim() || '📌';
+  const name = document.getElementById('ef-name').value.trim();
+  const meta = document.getElementById('ef-meta').value.trim();
+  const url  = document.getElementById('ef-url').value.trim();
+  if (!name) return showToast('error', 'Validation', 'Name is required.');
   try {
     if (editingId) {
       const updated = await api('PATCH', '/items/' + editingId, { icon, name, meta, url });
       allItems[allItems.findIndex(i => i._id === editingId)] = updated;
+      showToast('success', 'Updated', `"${name}" has been saved.`);
     } else {
       const created = await api('POST', '/items', { moduleId: currentMod, icon, name, meta, url });
       allItems.push(created);
+      showToast('success', 'Created', `"${name}" was added.`);
     }
-    closeOverlay('edit-overlay'); renderItems(allItems);
-  } catch (err) { 
-      // 如果触发了后端的安全拦截，这里会弹出红色的警告！
-      alert('⚠️ 操作被服务器拦截: ' + err.message); 
+    closeOverlay('edit-overlay');
+    renderItems(allItems);
+  } catch (err) {
+    showToast('error', 'Blocked', err.message);
   }
 }
-
+ 
 async function deleteItem(id) {
-  if (!confirm('Are you sure you want to delete this?')) return;
-  try { 
-      await api('DELETE', '/items/' + id); 
-      allItems = allItems.filter(i => i._id !== id); 
-      renderItems(allItems); 
-  } catch (err) { 
-      alert('⚠️ 操作被服务器拦截: ' + err.message); 
+  const item = allItems.find(i => i._id === id);
+  try {
+    await api('DELETE', '/items/' + id);
+    allItems = allItems.filter(i => i._id !== id);
+    renderItems(allItems);
+    showToast('success', 'Deleted', `"${item?.name || 'Item'}" was removed.`);
+  } catch (err) {
+    showToast('error', 'Blocked', err.message);
   }
 }
-
+ 
 function goBack() { showPage('dashboard-page'); buildDashboard(); }
-function logout() { sessionStorage.removeItem('nexus_user'); showPage('login-page'); }
-function showPage(id) { document.querySelectorAll('.page').forEach(p => p.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); window.scrollTo(0,0); }
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+  window.scrollTo(0,0);
+}
 function openOverlay(id) { document.getElementById(id).classList.add('show'); }
 function closeOverlay(id) { document.getElementById(id).classList.remove('show'); }
-
-if (sessionStorage.getItem('nexus_user')) { currentUser = JSON.parse(sessionStorage.getItem('nexus_user')); enterApp(); }
+ 
+let toastTimer = null;
+function showToast(type, title, msg) {
+  const el = document.getElementById('toast');
+  const dot = document.getElementById('toast-dot');
+  document.getElementById('toast-title').textContent = title;
+  document.getElementById('toast-msg').textContent = msg;
+  dot.className = 'toast-dot ' + (type === 'error' ? 'error' : type === 'info' ? 'info' : 'success');
+  el.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
+}
+ 
+if (sessionStorage.getItem('nexus_user')) {
+  currentUser = JSON.parse(sessionStorage.getItem('nexus_user'));
+  enterApp();
+}
 </script>
 </body>
 </html>
