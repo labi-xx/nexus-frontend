@@ -206,6 +206,7 @@
 </div>
 
 <script>
+// ─── Config ──────────────────────────────────────────────
 const API_BASE = 'https://nexus-api-server-ref0.onrender.com/api';
 
 const MODULES = [
@@ -216,8 +217,18 @@ const MODULES = [
 
 let currentUser = null, currentMod = null, allItems = [], editingId = null;
 
+// 🛡️ 核心改造：网络请求函数现在会携带身份证明
 async function api(method, path, body) {
-  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  const opts = { 
+      method, 
+      headers: { 'Content-Type': 'application/json' } 
+  };
+  
+  // 如果用户已登录，每次请求都把邮箱通过 Header 传给后端保安核实
+  if (currentUser && currentUser.email) {
+      opts.headers['X-User-Email'] = currentUser.email;
+  }
+
   if (body) opts.body = JSON.stringify(body);
   const res  = await fetch(API_BASE + path, opts);
   const data = await res.json().catch(() => ({}));
@@ -232,13 +243,14 @@ function switchTab(tab) {
   document.querySelectorAll('.api-error').forEach(e => e.classList.remove('show'));
 }
 
+// 🛡️ 核心改造：完全信任后端返回的 Role 权限
 async function doLogin() {
   const email = document.getElementById('login-email').value.trim();
   const pass  = document.getElementById('login-pass').value;
   try {
-    await api('POST', '/login', { email, password: pass });
-    const role = email.includes('admin') ? 'admin' : 'user';
-    currentUser = { name: email.split('@')[0].toUpperCase(), email, role };
+    const response = await api('POST', '/login', { email, password: pass });
+    // 后端现在会把真实的 user.role 传过来！
+    currentUser = { name: email.split('@')[0].toUpperCase(), email: response.user.email, role: response.user.role };
     sessionStorage.setItem('nexus_user', JSON.stringify(currentUser));
     enterApp();
   } catch (err) { alert(err.message); }
@@ -249,8 +261,8 @@ async function doRegister() {
   const pass  = document.getElementById('reg-pass').value;
   const name  = document.getElementById('reg-name').value;
   try {
-    await api('POST', '/register', { email, password: pass });
-    currentUser = { name: name.toUpperCase(), email, role: 'user' };
+    const response = await api('POST', '/register', { email, password: pass });
+    currentUser = { name: name.toUpperCase(), email: response.user.email, role: response.user.role };
     sessionStorage.setItem('nexus_user', JSON.stringify(currentUser));
     enterApp();
   } catch (err) { alert(err.message); }
@@ -297,15 +309,12 @@ function renderItems(items) {
   
   items.forEach(item => {
     const el = document.createElement('div'); el.className = 'list-item' + (isAdmin ? '' : ' clickable');
-    
-    // 如果是管理员，显示编辑/删除按钮；如果是普通用户，显示箭头
     const rightSide = isAdmin 
       ? `<div class="item-actions"><button class="btn-icon" onclick="openEditModal('${item._id}')">✎</button><button class="btn-icon" onclick="deleteItem('${item._id}')">✕</button></div>`
       : `<span style="color:var(--text-muted); font-size: 18px;">›</span>`;
     
     el.innerHTML = `<div class="list-icon">${item.icon||'📌'}</div><div class="list-info"><div class="list-name">${item.name}</div><div class="list-meta">${item.meta||''}</div></div>${rightSide}`;
     
-    // 普通用户点击卡片，会跳出详情与下载弹窗
     if (!isAdmin) {
       el.onclick = () => openViewModal(item, mod.ctaLabel);
     }
@@ -313,55 +322,40 @@ function renderItems(items) {
   });
 }
 
-// ---- 普通用户的专属查看弹窗 ----
 function openViewModal(item, ctaLabel) {
   document.getElementById('vm-icon').textContent  = item.icon || '📌';
   document.getElementById('vm-title').textContent = item.name;
   document.getElementById('vm-meta').textContent  = item.meta  || '';
-  
-  // 如果后台填了 URL，就在描述里暗示一下
-  document.getElementById('vm-desc').textContent  = "Click the button below to access the link.";
+  document.getElementById('vm-desc').textContent  = "Click the button below to access the secure link.";
   
   const cta = document.getElementById('vm-cta');
   cta.textContent = ctaLabel;
   cta.onclick = () => {
-    if (item.url) {
-      // 核心功能：如果有链接，点击后在新标签页打开！
-      window.open(item.url, '_blank'); 
-    } else {
-      alert("⚠️ Admin has not provided a link for this item yet.");
-    }
+    if (item.url) window.open(item.url, '_blank'); 
+    else alert("⚠️ Admin has not provided a link for this item yet.");
     closeOverlay('view-overlay');
   };
   openOverlay('view-overlay');
 }
 
 function openAddModal() { 
-  editingId = null; 
-  document.getElementById('edit-modal-title').textContent = 'Add Item'; 
-  document.getElementById('ef-icon').value = ''; 
-  document.getElementById('ef-name').value = ''; 
-  document.getElementById('ef-meta').value = ''; 
-  document.getElementById('ef-url').value = ''; 
+  editingId = null; document.getElementById('edit-modal-title').textContent = 'Add Item'; 
+  document.getElementById('ef-icon').value = ''; document.getElementById('ef-name').value = ''; 
+  document.getElementById('ef-meta').value = ''; document.getElementById('ef-url').value = ''; 
   openOverlay('edit-overlay'); 
 }
 
 function openEditModal(id) {
   const item = allItems.find(i => i._id === id); if (!item) return; editingId = id;
   document.getElementById('edit-modal-title').textContent = 'Edit Item';
-  document.getElementById('ef-icon').value = item.icon || ''; 
-  document.getElementById('ef-name').value = item.name || ''; 
-  document.getElementById('ef-meta').value = item.meta || '';
-  document.getElementById('ef-url').value = item.url || '';
+  document.getElementById('ef-icon').value = item.icon || ''; document.getElementById('ef-name').value = item.name || ''; 
+  document.getElementById('ef-meta').value = item.meta || ''; document.getElementById('ef-url').value = item.url || '';
   openOverlay('edit-overlay');
 }
 
 async function saveItem() {
-  const icon = document.getElementById('ef-icon').value.trim() || '📌';
-  const name = document.getElementById('ef-name').value.trim();
-  const meta = document.getElementById('ef-meta').value.trim();
-  const url  = document.getElementById('ef-url').value.trim(); // 获取网址输入框的值
-  
+  const icon = document.getElementById('ef-icon').value.trim() || '📌', name = document.getElementById('ef-name').value.trim();
+  const meta = document.getElementById('ef-meta').value.trim(), url  = document.getElementById('ef-url').value.trim();
   if (!name) return alert('Name required');
   try {
     if (editingId) {
@@ -372,13 +366,21 @@ async function saveItem() {
       allItems.push(created);
     }
     closeOverlay('edit-overlay'); renderItems(allItems);
-  } catch (err) { alert(err.message); }
+  } catch (err) { 
+      // 如果触发了后端的安全拦截，这里会弹出红色的警告！
+      alert('⚠️ 操作被服务器拦截: ' + err.message); 
+  }
 }
 
 async function deleteItem(id) {
   if (!confirm('Are you sure you want to delete this?')) return;
-  try { await api('DELETE', '/items/' + id); allItems = allItems.filter(i => i._id !== id); renderItems(allItems); } 
-  catch (err) { alert(err.message); }
+  try { 
+      await api('DELETE', '/items/' + id); 
+      allItems = allItems.filter(i => i._id !== id); 
+      renderItems(allItems); 
+  } catch (err) { 
+      alert('⚠️ 操作被服务器拦截: ' + err.message); 
+  }
 }
 
 function goBack() { showPage('dashboard-page'); buildDashboard(); }
