@@ -252,6 +252,11 @@ async function doLogin() {
     // 后端现在会把真实的 user.role 传过来！
     currentUser = { name: email.split('@')[0].toUpperCase(), email: response.user.email, role: response.user.role };
     sessionStorage.setItem('nexus_user', JSON.stringify(currentUser));
+
+    // 登录成功后，立刻清空输入框！
+    emailInput.value = '';
+    passInput.value = '';
+    
     enterApp();
   } catch (err) { alert(err.message); }
 }
@@ -264,8 +269,28 @@ async function doRegister() {
     const response = await api('POST', '/register', { email, password: pass });
     currentUser = { name: name.toUpperCase(), email: response.user.email, role: response.user.role };
     sessionStorage.setItem('nexus_user', JSON.stringify(currentUser));
+
+    // 关键步骤：注册成功后，立刻清空输入框！
+    emailInput.value = '';
+    passInput.value = '';
+    nameInput.value = '';
+    
     enterApp();
   } catch (err) { alert(err.message); }
+}
+
+// 🛡️ 登出后，彻底打扫战场
+function logout() { 
+  sessionStorage.removeItem('nexus_user'); 
+  
+  // 确保所有输入框干干净净
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('reg-email').value = '';
+  document.getElementById('reg-pass').value = '';
+  document.getElementById('reg-name').value = '';
+  
+  showPage('login-page'); 
 }
 
 function enterApp() {
