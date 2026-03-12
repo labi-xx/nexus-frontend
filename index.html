@@ -783,7 +783,15 @@ async function doRegister(){
  
 function logout(){
   sessionStorage.removeItem('nexus_user');
+  currentUser=null;
   ['login-email','login-pass','reg-email','reg-pass','reg-name'].forEach(id=>document.getElementById(id).value='');
+  // Reset both buttons back to their original label & enabled state
+  const lb=document.getElementById('login-btn');
+  lb.disabled=false; lb.innerHTML='🚀 Launch';
+  const rb=document.getElementById('register-btn');
+  rb.disabled=false; rb.innerHTML='🛸 Join Crew';
+  // Clear any error messages
+  document.querySelectorAll('.api-error').forEach(e=>e.classList.remove('show'));
   setState(null);
   showPage('login-page');
 }
