@@ -717,10 +717,16 @@ scene.addEventListener('click',()=>{
 /* ── API ── */
 async function api(method,path,body){
   const opts={method,headers:{'Content-Type':'application/json'}};
-  if(currentUser?.email) opts.headers['X-User-Email']=currentUser.email;
+  if(currentUser?.token) opts.headers['Authorization']='Bearer '+currentUser.token; // 真正的登录凭证，而不是裸邮箱
   if(body) opts.body=JSON.stringify(body);
   const res=await fetch(API_BASE+path,opts);
   const data=await res.json().catch(()=>({}));
+  // token 过期/失效，且已经是登录态发出的请求 → 自动退回登录页，避免用户一头雾水
+  if(res.status===401 && currentUser){
+    sessionStorage.removeItem('nexus_user');currentUser=null;
+    showPage('login-page');
+    showToast('error','登录已过期','请重新登录后再试一次');
+  }
   if(!res.ok||data.success===false) throw new Error(data.message||'Server error');
   return data;
 }
@@ -742,7 +748,7 @@ async function doLogin(){
   setState('thinking');
   try{
     const r=await api('POST','/login',{email,password:pass});
-    currentUser={name:email.split('@')[0].toUpperCase(),email:r.user.email,role:r.user.role};
+    currentUser={name:email.split('@')[0].toUpperCase(),email:r.user.email,role:r.user.role,token:r.token};
     sessionStorage.setItem('nexus_user',JSON.stringify(currentUser));
     document.getElementById('login-email').value='';
     document.getElementById('login-pass').value='';
@@ -767,7 +773,7 @@ async function doRegister(){
   setState('thinking');
   try{
     const r=await api('POST','/register',{email,password:pass});
-    currentUser={name:name.toUpperCase(),email:r.user.email,role:r.user.role};
+    currentUser={name:name.toUpperCase(),email:r.user.email,role:r.user.role,token:r.token};
     sessionStorage.setItem('nexus_user',JSON.stringify(currentUser));
     ['reg-email','reg-pass','reg-name'].forEach(id=>document.getElementById(id).value='');
     setState('happy');
